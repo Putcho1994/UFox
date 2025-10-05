@@ -2,8 +2,8 @@
 // Created by b-boy on 05.10.2025.
 //
 module;
+#include <iostream>
 #include <vector>  // For std::vector
-#include <fmt/core.h>
 export module ufox_lib;
 
 
@@ -29,9 +29,8 @@ export namespace ufox {
             columns.push_back(child);
         }
 
-        void print() {
-            fmt::print("Panel at ({}, {}) with size ({}, {})\n", x, y, width, height);
-
+        void print() const{
+            std::cout << "Panel: " << x << ", " << y << ", " << width << ", " << height << std::endl;
         }
     };
 

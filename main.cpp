@@ -1,29 +1,26 @@
 import hello_uFox;
 import ufox_lib;
 import ufox_windowing;
-
+import ufox_engine;
 
 #include <iostream>
 
 
 int main() {
-
-
-    try {
-        using ufox::windowing::sdl::WindowFlag;
-        ufox::windowing::sdl::UFoxWindow window("UFoxEngine Test",
-            WindowFlag::Vulkan | WindowFlag::Resizable);
-
-        window.Show();
-
-
-        bool running = true;
-
-        window.Run(running);
-
-        return 0;
-    } catch (const ufox::windowing::sdl::SDLException& e) {
-        std::cerr << e.what() << std::endl;
-        return 1;
-    }
+    using ufox::windowing::sdl::WindowFlag;
+    ufox::IDE ide;
+    ide.Init();
+    return ide.Run();
+    // try {
+    //
+    //     ufox::windowing::sdl::UFoxWindow window("UFox",
+    //         WindowFlag::Vulkan | WindowFlag::Resizable);
+    //
+    //     window.ShowAndRun();
+    //
+    //     return 0;
+    // } catch (const ufox::windowing::sdl::SDLException& e) {
+    //     std::cerr << e.what() << std::endl;
+    //     return 1;
+    // }
 }

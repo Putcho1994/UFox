@@ -75,37 +75,16 @@ export namespace ufox::windowing::sdl {
             SDL_HideWindow(_window.get());
         }
 
-        void Run(bool& state){
-            SDL_Event event;
-            while (state) {
-                while (SDL_PollEvent(&event)) {
-                    switch (event.type) {
-                        case SDL_EVENT_QUIT: {
-                            state = false;
-                            break;
-                        }
-                        case SDL_EVENT_WINDOW_RESIZED:{
-                            UpdateRootPanel();
-                            break;
-                        }
-                        default: {}
-                    }
-
-                }
-            }
+        void UpdateRootPanel() {
+            SDL_GetWindowSize(_window.get(), &_rootPanel.width, &_rootPanel.height);
+            _rootPanel.print();
         }
-
-
-
 
     private:
         std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> _window;
         Panel _rootPanel{};
 
-        void UpdateRootPanel() {
-            SDL_GetWindowSize(_window.get(), &_rootPanel.width, &_rootPanel.height);
-            _rootPanel.print();
-        }
+
     };
 
 
