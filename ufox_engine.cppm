@@ -19,8 +19,8 @@ export namespace ufox {
         ~IDE() = default;
 
         void Init() {
-
-            _window.emplace("UFox", windowing::sdl::WindowFlag::Vulkan | windowing::sdl::WindowFlag::Resizable);
+            using windowing::sdl::WindowFlag;
+            _window.emplace("UFox", WindowFlag::Vulkan | WindowFlag::Resizable);
 
         }
 
