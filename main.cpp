@@ -2,7 +2,7 @@ import hello_uFox;
 import ufox_lib;
 import ufox_windowing;
 
-#include <SDL3/SDL.h>
+
 #include <iostream>
 
 
@@ -16,20 +16,10 @@ int main() {
 
         window.Show();
 
-        SDL_Event event;
+
         bool running = true;
 
-        while (running) {
-            while (SDL_PollEvent(&event)) {
-                switch (event.type) {
-                    case SDL_EVENT_QUIT: {
-                        running = false;
-                        break;
-                    }
-                    default: {}
-                }
-            }
-        }
+        window.Run(running);
 
         return 0;
     } catch (const ufox::windowing::sdl::SDLException& e) {

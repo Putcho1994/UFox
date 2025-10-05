@@ -38,7 +38,7 @@ file(DOWNLOAD
 
 include(${CPM_DOWNLOAD_LOCATION})
 
-
+CPMAddPackage(NAME fmt GITHUB_REPOSITORY fmtlib/fmt GIT_TAG 12.0.0)
 CPMAddPackage(NAME SDL3 GITHUB_REPOSITORY libsdl-org/SDL GIT_TAG release-3.2.24 OPTIONS "SDL_VULKAN ON" "SDL_STATIC OFF")
 CPMAddPackage(NAME Vulkan-Headers GITHUB_REPOSITORY KhronosGroup/Vulkan-Headers GIT_TAG v1.4.328)
 CPMAddPackage(NAME glm GITHUB_REPOSITORY g-truc/glm GIT_TAG 1.0.1)
@@ -61,7 +61,7 @@ target_link_libraries(glm-module
 )
 
 set(LIBS)
-list(APPEND LIBS SDL3::SDL3 Vulkan-Headers glm-module)
+list(APPEND LIBS fmt::fmt SDL3::SDL3 Vulkan-Headers glm-module)
 
 add_executable(UFoxEngine)
 

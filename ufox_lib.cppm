@@ -3,7 +3,7 @@
 //
 module;
 #include <vector>  // For std::vector
-
+#include <fmt/core.h>
 export module ufox_lib;
 
 
@@ -30,7 +30,7 @@ export namespace ufox {
         }
 
         void print() {
-
+            fmt::print("Panel at ({}, {}) with size ({}, {})\n", x, y, width, height);
 
         }
     };

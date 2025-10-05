@@ -13,12 +13,6 @@ export module ufox_windowing;
 import glm;
 import ufox_lib;
 
-export namespace ufox::windowing {
-    constexpr glm::vec2 DEFAULT_WINDOW_SIZE = {800, 600};
-
-
-}
-
 
 export namespace ufox::windowing::sdl {
 
@@ -81,13 +75,34 @@ export namespace ufox::windowing::sdl {
             SDL_HideWindow(_window.get());
         }
 
+        void Run(bool& state){
+            SDL_Event event;
+            while (state) {
+                while (SDL_PollEvent(&event)) {
+                    switch (event.type) {
+                        case SDL_EVENT_QUIT: {
+                            state = false;
+                            break;
+                        }
+                        case SDL_EVENT_WINDOW_RESIZED:{
+                            UpdateRootPanel();
+                            break;
+                        }
+                        default: {}
+                    }
+
+                }
+            }
+        }
+
+
+
 
     private:
         std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> _window;
         Panel _rootPanel{};
 
         void UpdateRootPanel() {
-            SDL_GetWindowPosition(_window.get(), &_rootPanel.x, &_rootPanel.y);
             SDL_GetWindowSize(_window.get(), &_rootPanel.width, &_rootPanel.height);
             _rootPanel.print();
         }
