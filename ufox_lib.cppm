@@ -3,7 +3,7 @@
 //
 module;
 #include <vector>  // For std::vector
-#include <print>
+
 export module ufox_lib;
 
 
@@ -31,7 +31,7 @@ export namespace ufox {
 
         void print() {
 
-            std::println("Panel: x: {}, y: {}, width: {}, height: {}\n", x, y, width, height);
+
         }
     };
 
