@@ -40,11 +40,13 @@ include(${CPM_DOWNLOAD_LOCATION})
 
 
 CPMAddPackage(NAME SDL3 GITHUB_REPOSITORY libsdl-org/SDL GIT_TAG release-3.2.24 OPTIONS "SDL_VULKAN ON" "SDL_STATIC OFF")
+CPMAddPackage(NAME glfw GITHUB_REPOSITORY glfw/glfw GIT_TAG 3.4 OPTIONS "GLFW_BUILD_TESTS OFF" "GLFW_BUILD_EXAMPLES OFF" "GLFW_BUILD_DOCS OFF")
 CPMAddPackage(NAME Vulkan-Headers GITHUB_REPOSITORY KhronosGroup/Vulkan-Headers GIT_TAG v1.4.328)
 CPMAddPackage(NAME glm GITHUB_REPOSITORY g-truc/glm GIT_TAG 1.0.1)
-target_compile_definitions(Vulkan-Headers INTERFACE
-      "VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL=OFF"
-)
+
+#target_compile_definitions(Vulkan-Headers INTERFACE
+        #"VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL=OFF"
+#)
 
 add_library(glm-module)
 target_sources(glm-module
@@ -61,30 +63,27 @@ target_link_libraries(glm-module
 )
 
 set(LIBS)
-list(APPEND LIBS SDL3::SDL3 Vulkan-Headers glm-module)
+list(APPEND LIBS SDL3::SDL3 glfw Vulkan-Headers glm-module)
+
 
 add_executable(UFoxEngine)
 
 # Regular sources
 target_sources(UFoxEngine
         PRIVATE
-        main.cpp
+        src/main.cpp
 )
-
-
 
 # Explicitly declare module interface files
 target_sources(UFoxEngine
         PRIVATE
         FILE_SET cxx_modules TYPE CXX_MODULES FILES
-        hello_world.cppm
-        ufox_Lib.cppm
-        ufox_windowing.cppm
-        ufox_graphic.cppm
-        ufox_engine.cppm
+        src/hello_world.cppm
+        src/ufox_Lib.cppm
+        src/ufox_windowing.cppm
+        src/ufox_graphic.cppm
+        src/ufox_engine.cppm
 )
-
-
 
 # Link everything
 target_link_libraries(UFoxEngine PRIVATE ${LIBS})
