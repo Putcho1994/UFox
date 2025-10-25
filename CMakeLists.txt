@@ -48,9 +48,10 @@ CPMAddPackage(NAME glm GITHUB_REPOSITORY g-truc/glm GIT_TAG 1.0.1)
         #"VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL=OFF"
 #)
 
+find_package(Freetype REQUIRED)
+
 # Enable USE_SDL define
 option(USE_SDL "Enable SDL3 support" OFF)
-
 
 
 add_library(glm-module)
@@ -68,7 +69,7 @@ target_link_libraries(glm-module
 )
 
 set(LIBS)
-list(APPEND LIBS SDL3::SDL3 glfw Vulkan-Headers glm-module)
+list(APPEND LIBS SDL3::SDL3 glfw Vulkan-Headers glm-module Freetype::Freetype)
 
 
 add_executable(UFoxEngine)
@@ -78,6 +79,7 @@ target_sources(UFoxEngine
         PRIVATE
         src/main.cpp
 )
+
 
 # Add USE_SDL define if enabled
 if(USE_SDL)
@@ -90,11 +92,77 @@ target_sources(UFoxEngine
         FILE_SET cxx_modules TYPE CXX_MODULES FILES
         src/hello_world.cppm
         src/ufox_Lib.cppm
-        src/ufox_windowing.cppm
         src/ufox_graphic_device.cppm
+        src/ufox_gui_renderer.cppm
+        src/ufox_windowing.cppm
         src/ufox_engine.cppm
 )
 
 # Link everything
 target_link_libraries(UFoxEngine PRIVATE ${LIBS})
 
+find_program(GLSL_VALIDATOR glslangValidator HINTS $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
+find_program(SLANGC_EXECUTABLE slangc HINTS $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
+## find all the shader files under the shaders folder
+file(GLOB_RECURSE GLSL_SOURCE_FILES
+        "${PROJECT_SOURCE_DIR}/res/shaders/*.frag"
+        "${PROJECT_SOURCE_DIR}/res/shaders/*.vert"
+        "${PROJECT_SOURCE_DIR}/res/shaders/*.comp"
+)
+
+## find all the shader files under the shaders folder
+file(GLOB_RECURSE SHADER_SLANG_SOURCES
+        "${PROJECT_SOURCE_DIR}/res/shaders/*.slang"
+)
+
+## iterate each shader
+foreach(GLSL ${GLSL_SOURCE_FILES})
+    message(STATUS "BUILDING SHADER")
+    get_filename_component(FILE_NAME ${GLSL} NAME)
+    set(SPIRV "${PROJECT_SOURCE_DIR}/bin/res/shaders/${FILE_NAME}.spv")
+    message(STATUS ${GLSL})
+    ##execute glslang command to compile that specific shader
+    add_custom_command(
+            OUTPUT ${SPIRV}
+            COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
+            DEPENDS ${GLSL})
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+endforeach(GLSL)
+
+
+
+function (add_slang_shader_target TARGET)
+    cmake_parse_arguments ("SHADER" "" "" "SOURCES" ${ARGN})
+    set (SHADERS_DIR "${PROJECT_SOURCE_DIR}/bin/res/shaders")
+    get_filename_component(FILE_NAME ${SHADER_SOURCES} NAME)
+    set(FULL_PATH "${SHADERS_DIR}/${FILE_NAME}.spv")
+    set (ENTRY_POINTS -entry vertMain -entry fragMain)
+    add_custom_command (
+            OUTPUT ${SHADERS_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADERS_DIR}
+    )
+    add_custom_command (
+            OUTPUT  ${FULL_PATH}
+            COMMAND ${SLANGC_EXECUTABLE} ${SHADER_SOURCES} -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name ${ENTRY_POINTS} -o ${FILE_NAME}.spv
+            WORKING_DIRECTORY ${SHADERS_DIR}
+            DEPENDS ${SHADERS_DIR} ${SHADER_SOURCES}
+            COMMENT "Compiling Slang Shaders, target: ${SHADER_SOURCES}, out: ${FULL_PATH}"
+            VERBATIM
+    )
+    add_custom_target (${TARGET} DEPENDS ${FULL_PATH})
+endfunction()
+
+
+add_custom_target(
+        glsl-shaders
+        ALL DEPENDS ${SPIRV_BINARY_FILES}
+)
+
+
+add_dependencies(UFoxEngine glsl-shaders)
+
+foreach(SLANG ${SHADER_SLANG_SOURCES})
+    get_filename_component(FILE_NAME ${SLANG} NAME)
+    add_slang_shader_target(slang_${FILE_NAME} SOURCES ${SLANG})
+    add_dependencies(UFoxEngine slang_${FILE_NAME})
+endforeach()

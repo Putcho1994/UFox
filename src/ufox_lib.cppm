@@ -7,7 +7,9 @@ module;
 #include <iostream>
 #include <string>
 #include <format>
+#include <functional>
 #include <vulkan/vulkan_raii.hpp>
+#include <glm/glm.hpp>
 
 #ifdef USE_SDL
 #include <SDL3/SDL.h>
@@ -18,6 +20,43 @@ module;
 export module ufox_lib;
 
 export namespace ufox {
+    namespace utilities {
+        size_t GenerateUniqueID(const std::vector<glm::vec4>& fields) {
+            std::hash<float> floatHasher;
+            size_t hash = 0;
+            auto combineHash = [&hash](size_t value) {
+                hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+            };
+            auto combineFloat = [&combineHash, &floatHasher](float value) {
+                float normalized = std::round(value * 1000000.0f) / 1000000.0f;
+                combineHash(floatHasher(normalized));
+            };
+            for (const auto& vec : fields) {
+                combineFloat(vec.r);
+                combineFloat(vec.g);
+                combineFloat(vec.b);
+                combineFloat(vec.a);
+            }
+            return hash;
+        }
+
+        // Hash a vector of floats
+        size_t GenerateUniqueID(const std::vector<float>& fields) {
+            std::hash<float> floatHasher;
+            size_t hash = 0;
+            auto combineHash = [&hash](size_t value) {
+                hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+            };
+            auto combineFloat = [&combineHash, &floatHasher](float value) {
+                float normalized = std::round(value * 1000000.0f) / 1000000.0f;
+                combineHash(floatHasher(normalized));
+            };
+            for (float value : fields) {
+                combineFloat(value);
+            }
+            return hash;
+        }
+    }
     namespace debug {
         enum class LogLevel {
             eInfo,
@@ -37,32 +76,6 @@ export namespace ufox {
             std::cout << std::format("[{}] {}\n", level_str, message);
         }
     }
-
-    struct Panel {
-        int x = 0;
-        int y = 0;
-        int width = 0;
-        int height = 0;
-
-        std::vector<Panel*> rows;
-        std::vector<Panel*> columns;
-
-        void addRowChild(Panel* child) { rows.push_back(child); }
-        void addColumnChild(Panel* child) { columns.push_back(child); }
-        void print() const {
-            debug::log(debug::LogLevel::eInfo, "Panel: x={}, y={}, width={}, height={}", x, y, width, height);
-        }
-
-        // Getters/Setters
-        int getX() const { return x; }
-        void setX(int val) { x = val; }
-        int getY() const { return y; }
-        void setY(int val) { y = val; }
-        int getWidth() const { return width; }
-        void setWidth(int val) { width = val; }
-        int getHeight() const { return height; }
-        void setHeight(int val) { height = val; }
-    };
 
     namespace windowing {
 
@@ -93,13 +106,93 @@ export namespace ufox {
         };
 
 
+WindowResource CreateWindow( std::string const & windowName, vk::Extent2D const & extent ) {
+#ifdef USE_SDL
 
+        struct sdlContext {
+            sdlContext() {
+                if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+                    debug::log(debug::LogLevel::eError, "Failed to initialize SDL: {}", SDL_GetError());
+                    throw std::runtime_error("Failed to initialize SDL");
+                }
+
+            }
+            ~sdlContext() { SDL_Quit(); }
+        };
+        static auto sdlCtx = sdlContext();
+        (void)sdlCtx;
+
+        // SDL_DisplayID primary = SDL_GetPrimaryDisplay();
+        // SDL_Rect usableBounds{};
+        // SDL_GetDisplayUsableBounds(primary, &usableBounds);
+
+        Uint32 flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
+        SDL_Window* window = SDL_CreateWindow(windowName.c_str(), static_cast<int>(extent.width), static_cast<int>(extent.height), flags);
+        if (!window) {
+            throw std::runtime_error("Failed to create SDL window");
+        }
+
+        //SDL_SetWindowPosition(window, 2, 32);
+        debug::log(debug::LogLevel::eInfo, "Created SDL window: {} ({}x{})", windowName, static_cast<int>(extent.width), static_cast<int>(extent.height));
+        return WindowResource{window};
+#else
+
+        struct glfwContext {
+            glfwContext() {
+                glfwInit();
+                glfwSetErrorCallback([](int error, const char* msg) {
+                    debug::log(debug::LogLevel::eError, "GLFW error ({}): {}", error, msg);
+                });
+            }
+            ~glfwContext() { glfwTerminate(); }
+        };
+        static auto glfwCtx = glfwContext();
+        (void)glfwCtx;
+
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        GLFWwindow* window = glfwCreateWindow(static_cast<int>(extent.width), static_cast<int>(extent.height), windowName.c_str(), nullptr, nullptr);
+        if (!window) {
+            debug::log(debug::LogLevel::eError, "Failed to create GLFW window: {}", windowName);
+            throw std::runtime_error("Failed to create GLFW window");
+        }
+        debug::log(debug::LogLevel::eInfo, "Created GLFW window: {} ({}x{})", windowName, static_cast<int>(extent.width), static_cast<int>(extent.height));
+        return WindowResource{window};
+#endif
+    }
 
 
     }
 
 
 namespace gpu::vulkan {
+
+        uint32_t FindMemoryType(const vk::PhysicalDeviceMemoryProperties &memoryProperties, uint32_t typeBits,
+                            vk::MemoryPropertyFlags requirementsMask){
+            auto typeIndex = static_cast<uint32_t>(~0);
+            for ( uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++ )
+            {
+                if ( typeBits & 1 && ( memoryProperties.memoryTypes[i].propertyFlags & requirementsMask ) == requirementsMask )
+                {
+                    typeIndex = i;
+                    break;
+                }
+                typeBits >>= 1;
+            }
+            assert( typeIndex != static_cast<uint32_t>(~0));
+            return typeIndex;
+        }
+
+        vk::raii::DeviceMemory AllocateDeviceMemory( vk::raii::Device const &                   device,
+                                                           vk::PhysicalDeviceMemoryProperties const & memoryProperties,
+                                                           vk::MemoryRequirements const &             memoryRequirements,
+                                                           vk::MemoryPropertyFlags                    memoryPropertyFlags )
+        {
+            uint32_t               memoryTypeIndex = FindMemoryType( memoryProperties, memoryRequirements.memoryTypeBits, memoryPropertyFlags );
+            vk::MemoryAllocateInfo memoryAllocateInfo( memoryRequirements.size, memoryTypeIndex );
+            return {device, memoryAllocateInfo};
+        }
+
+
         struct PhysicalDeviceRequirements {
             static constexpr uint32_t MINIMUM_API_VERSION = vk::ApiVersion14;
             static constexpr uint32_t DISCRETE_GPU_SCORE_BONUS = 1000;
@@ -178,6 +271,10 @@ namespace gpu::vulkan {
                 return renderFinishedSemaphores[currentImageIndex];
             }
 
+            [[nodiscard]] uint32_t getImageCount() const {
+                return static_cast<uint32_t>(images.size());
+            }
+
             void Clear() {
                 imageViews.clear();
                 renderFinishedSemaphores.clear();
@@ -214,21 +311,131 @@ namespace gpu::vulkan {
             uint32_t                                    presentFamily{0};
         };
 
+        struct GPUResources {
+            std::optional<vk::raii::Context>            context{};
+            std::optional<vk::raii::Instance>           instance{};
+
+            std::optional<vk::raii::PhysicalDevice>     physicalDevice{};
+            std::optional<vk::raii::Device>             device{};
+            std::optional<QueueFamilyIndices>           queueFamilyIndices{};
+
+            std::optional<vk::raii::CommandPool>        commandPool{};
+
+            std::optional<vk::raii::Queue>              graphicsQueue{};
+            std::optional<vk::raii::Queue>              presentQueue{};
+        };
+
+        struct Buffer {
+            Buffer( vk::raii::PhysicalDevice const & physicalDevice,
+                                vk::raii::Device const &         device,
+                                vk::DeviceSize                   size,
+                                vk::BufferUsageFlags             usage,
+                                vk::MemoryPropertyFlags          propertyFlags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent ) {
+                vk::BufferCreateInfo bufferInfo{};
+                bufferInfo
+                .setSize( size )
+                .setUsage( usage );
+                data.emplace(device, bufferInfo);
+
+                memory = AllocateDeviceMemory( device, physicalDevice.getMemoryProperties(), data->getMemoryRequirements(), propertyFlags );
+                data->bindMemory( *memory,0 );
+            }
+
+            Buffer(const GPUResources& gpu, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags propertyFlags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent ) :
+                Buffer(gpu.physicalDevice.value(), gpu.device.value(), size, usage, propertyFlags){}
+
+
+            Buffer() = default;
+
+
+            std::optional<vk::raii::DeviceMemory>       memory{nullptr};
+            std::optional<vk::raii::Buffer>             data{nullptr};
+        };
+
+        struct RemapableBuffer {
+            std::optional<Buffer>                       buffer{};
+            std::optional<void*>                        mapped{nullptr};
+        };
     }
 
-    struct GPUResources {
-        std::optional<vk::raii::Context>                context{};
-        std::optional<vk::raii::Instance>               instance{};
 
-        std::optional<vk::raii::PhysicalDevice>         physicalDevice{};
-        std::optional<vk::raii::Device>                 device{};
-        std::optional<gpu::vulkan::QueueFamilyIndices>  queueFamilyIndices{};
-
-        std::optional<vk::raii::CommandPool>            commandPool{};
+    namespace gui {
+        struct Vertex {
+            glm::vec2 position;
+            glm::vec3 color;
+            glm::vec2 uv;
 
 
-        std::optional<vk::raii::Queue>                  graphicsQueue{};
-        std::optional<vk::raii::Queue>                  presentQueue{};
 
+            static constexpr  vk::VertexInputBindingDescription getBindingDescription(uint32_t binding) {
+                vk::VertexInputBindingDescription bindingDescription{};
+                bindingDescription.setBinding(binding).setStride(sizeof(Vertex)).setInputRate(vk::VertexInputRate::eVertex);
+                return bindingDescription;
+            }
+
+            static constexpr  std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions(uint32_t binding) {
+                std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions{};
+                attributeDescriptions[0].setBinding(binding).setLocation(0).setFormat(vk::Format::eR32G32Sfloat).setOffset(0);
+                attributeDescriptions[1].setBinding(binding).setLocation(1).setFormat(vk::Format::eR32G32B32A32Sfloat).setOffset(offsetof(Vertex, color));
+                attributeDescriptions[2].setBinding(binding).setLocation(2).setFormat(vk::Format::eR32G32Sfloat).setOffset(offsetof(Vertex, uv));
+                return attributeDescriptions;
+            }
+        };
+
+        struct UniformBufferObject {
+          alignas(16)  glm::mat4 model;
+          alignas(16)  glm::mat4 view;
+          alignas(16)  glm::mat4 proj;
+        };
+
+        constexpr Vertex Geometries[] {
+            {{0.0f, 0.0f,}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}, // Top-left
+             {{1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}}, // Top-right
+             {{1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}, // Bottom-right
+             {{0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}, // Bottom-left
     };
+
+        constexpr uint16_t Indices[] {
+            0, 1, 2, 2, 3, 0,
+    };
+
+
+
+        // GUIStyle: Visual properties for GUI elements
+        struct Style {
+            glm::vec4 backgroundColor = {0.5f, 0.5f, 0.5f, 1.0f};
+            glm::vec4 borderTopColor = {0.0f, 0.0f, 0.0f, 1.0f};
+            glm::vec4 borderRightColor = {0.0f, 0.0f, 0.0f, 1.0f};
+            glm::vec4 borderBottomColor = {0.0f, 0.0f, 0.0f, 1.0f};
+            glm::vec4 borderLeftColor = {0.0f, 0.0f, 0.0f, 1.0f};
+            glm::vec4 borderThickness = {1.0f, 1.0f, 1.0f, 1.0f}; // Top, right, bottom, left
+            glm::vec4 cornerRadius = {10.0f, 10.0f, 10.0f, 10.0f}; // Top-left, top-right, bottom-left, bottom-right
+
+            [[nodiscard]] size_t generateUniqueID() const {
+                return utilities::GenerateUniqueID({
+                    backgroundColor,
+                    borderTopColor,
+                    borderRightColor,
+                    borderBottomColor,
+                    borderLeftColor,
+                    borderThickness,
+                    cornerRadius
+                });
+            }
+        };
+
+        struct StyleBuffer {
+            size_t                  hashUID;
+            Style                   content;
+            gpu::vulkan::Buffer     buffer{};
+        };
+
+        constexpr vk::DeviceSize GUI_VERTEX_BUFFER_SIZE = sizeof(Vertex);
+        //constexpr vk::DeviceSize GUI_TRANSFORM_MATRIX_SIZE = sizeof(GUITransformMatrix);
+        constexpr vk::DeviceSize GUI_RECT_MESH_BUFFER_SIZE = sizeof(Geometries);
+        constexpr vk::DeviceSize GUI_INDEX_BUFFER_SIZE = sizeof(Indices);
+        constexpr vk::DeviceSize GUI_STYLE_BUFFER_SIZE = sizeof(Style);
+
+
+    }
 }

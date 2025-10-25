@@ -17,7 +17,7 @@ module;
 #include <set>
 #include <GLFW/glfw3.h>
 
-export module ufox_graphic;
+export module ufox_graphic_device;
 
 import ufox_lib;
 
@@ -116,6 +116,8 @@ export namespace ufox::gpu::vulkan {
                 return {};
         }
     }
+
+
 
     [[nodiscard]] vk::PresentModeKHR ChooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) {
         for (const auto& availablePresentMode : availablePresentModes) {
@@ -373,11 +375,9 @@ export namespace ufox::gpu::vulkan {
         return MakePresentQueue(*gpu.device, *gpu.queueFamilyIndices);
     }
 
-
-
-
     void ReMakeSwapchainResource(SwapchainResource& resource, const vk::raii::PhysicalDevice& physicalDevice, const vk::raii::Device& device, const vk::raii::SurfaceKHR& surface,
         const vk::Extent2D& extent, vk::ImageUsageFlags usage, uint32_t graphicsQueueFamilyIndex, uint32_t presentQueueFamilyIndex) {
+
         vk::SurfaceCapabilitiesKHR surfaceCapabilities  = physicalDevice.getSurfaceCapabilitiesKHR( surface );
         vk::SurfaceFormatKHR surfaceFormat              = ChooseSwapSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(*surface));
         resource.colorFormat                            = surfaceFormat.format;
@@ -472,6 +472,123 @@ export namespace ufox::gpu::vulkan {
         return MakeFrameResource(*gpu.device, *gpu.commandPool, fenceFlags);
     }
 
+    vk::raii::ShaderModule CreateShaderModule(const vk::raii::Device& device, const std::vector<char>& code) {
+        vk::ShaderModuleCreateInfo createInfo{};
+        createInfo
+            .setCodeSize(code.size() * sizeof(char))
+            .setPCode(reinterpret_cast<const uint32_t*>(code.data()));
+
+        vk::raii::ShaderModule shaderModule{ device, createInfo };
+
+        return shaderModule;
+    }
+
+    vk::raii::ShaderModule CreateShaderModule(const GPUResources& gpu, const std::vector<char>& code) {
+        return CreateShaderModule(*gpu.device, code);
+    }
+
+    vk::PipelineVertexInputStateCreateInfo MakePipeVertexInputState(
+            std::span<const vk::VertexInputBindingDescription> bindings,
+            std::span<const vk::VertexInputAttributeDescription> attributes) {
+        vk::PipelineVertexInputStateCreateInfo vertexInputInfo{};
+        vertexInputInfo
+            .setVertexBindingDescriptionCount(bindings.size())
+            .setVertexAttributeDescriptionCount(attributes.size())
+            .setVertexBindingDescriptions(bindings)
+            .setVertexAttributeDescriptions(attributes);
+        return vertexInputInfo;
+    }
+
+
+    vk::raii::Pipeline makeGraphicsPipeline( vk::raii::Device const &                             device,
+                                               vk::raii::PipelineCache const &                      pipelineCache,
+                                               vk::raii::ShaderModule const &                       vertexShaderModule,
+                                               vk::SpecializationInfo const *                       vertexShaderSpecializationInfo,
+                                               vk::raii::ShaderModule const &                       fragmentShaderModule,
+                                               vk::SpecializationInfo const *                       fragmentShaderSpecializationInfo,
+                                               uint32_t                                             vertexStride,
+                                               std::vector<std::pair<vk::Format, uint32_t>> const & vertexInputAttributeFormatOffset,
+                                               vk::FrontFace                                        frontFace,
+                                               bool                                                 depthBuffered,
+                                               vk::raii::PipelineLayout const &                     pipelineLayout,
+                                               vk::raii::RenderPass const &                         renderPass )
+      {
+        std::array pipelineShaderStageCreateInfos = {
+          vk::PipelineShaderStageCreateInfo( {}, vk::ShaderStageFlagBits::eVertex, vertexShaderModule, "main", vertexShaderSpecializationInfo ),
+          vk::PipelineShaderStageCreateInfo( {}, vk::ShaderStageFlagBits::eFragment, fragmentShaderModule, "main", fragmentShaderSpecializationInfo )
+        };
+
+        std::vector<vk::VertexInputAttributeDescription> vertexInputAttributeDescriptions;
+        vk::PipelineVertexInputStateCreateInfo           pipelineVertexInputStateCreateInfo;
+        vk::VertexInputBindingDescription                vertexInputBindingDescription( 0, vertexStride );
+
+        if ( 0 < vertexStride )
+        {
+          vertexInputAttributeDescriptions.reserve( vertexInputAttributeFormatOffset.size() );
+          for ( uint32_t i = 0; i < vertexInputAttributeFormatOffset.size(); i++ )
+          {
+            vertexInputAttributeDescriptions.emplace_back( i, 0, vertexInputAttributeFormatOffset[i].first, vertexInputAttributeFormatOffset[i].second );
+          }
+          pipelineVertexInputStateCreateInfo.setVertexBindingDescriptions( vertexInputBindingDescription );
+          pipelineVertexInputStateCreateInfo.setVertexAttributeDescriptions( vertexInputAttributeDescriptions );
+        }
+
+        vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo( vk::PipelineInputAssemblyStateCreateFlags(),
+                                                                                       vk::PrimitiveTopology::eTriangleList );
+
+        vk::PipelineViewportStateCreateInfo pipelineViewportStateCreateInfo( vk::PipelineViewportStateCreateFlags(), 1, nullptr, 1, nullptr );
+
+        vk::PipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo( vk::PipelineRasterizationStateCreateFlags(),
+                                                                                       false,
+                                                                                       false,
+                                                                                       vk::PolygonMode::eFill,
+                                                                                       vk::CullModeFlagBits::eBack,
+                                                                                       frontFace,
+                                                                                       false,
+                                                                                       0.0f,
+                                                                                       0.0f,
+                                                                                       0.0f,
+                                                                                       1.0f );
+
+        vk::PipelineMultisampleStateCreateInfo pipelineMultisampleStateCreateInfo( {}, vk::SampleCountFlagBits::e1 );
+
+        vk::StencilOpState                      stencilOpState( vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways );
+        vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo(
+          vk::PipelineDepthStencilStateCreateFlags(), depthBuffered, depthBuffered, vk::CompareOp::eLessOrEqual, false, false, stencilOpState, stencilOpState );
+
+        vk::ColorComponentFlags colorComponentFlags( vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB |
+                                                     vk::ColorComponentFlagBits::eA );
+        vk::PipelineColorBlendAttachmentState pipelineColorBlendAttachmentState( false,
+                                                                                 vk::BlendFactor::eZero,
+                                                                                 vk::BlendFactor::eZero,
+                                                                                 vk::BlendOp::eAdd,
+                                                                                 vk::BlendFactor::eZero,
+                                                                                 vk::BlendFactor::eZero,
+                                                                                 vk::BlendOp::eAdd,
+                                                                                 colorComponentFlags );
+        vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo(
+          vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eNoOp, pipelineColorBlendAttachmentState, { { 1.0f, 1.0f, 1.0f, 1.0f } } );
+
+        std::array    dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+        vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo( vk::PipelineDynamicStateCreateFlags(), dynamicStates );
+
+        vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo( vk::PipelineCreateFlags(),
+                                                                   pipelineShaderStageCreateInfos,
+                                                                   &pipelineVertexInputStateCreateInfo,
+                                                                   &pipelineInputAssemblyStateCreateInfo,
+                                                                   nullptr,
+                                                                   &pipelineViewportStateCreateInfo,
+                                                                   &pipelineRasterizationStateCreateInfo,
+                                                                   &pipelineMultisampleStateCreateInfo,
+                                                                   &pipelineDepthStencilStateCreateInfo,
+                                                                   &pipelineColorBlendStateCreateInfo,
+                                                                   &pipelineDynamicStateCreateInfo,
+                                                                   pipelineLayout,
+                                                                   renderPass );
+
+        return { device, pipelineCache, graphicsPipelineCreateInfo };
+      }
+
     void TransitionImageLayout(const vk::raii::CommandBuffer& cmb, const vk::Image& image,
         const vk::PipelineStageFlags2& srcStageMask, const vk::PipelineStageFlags2& dstStageMask,
         const vk::AccessFlags2& srcAccessMask, const vk::AccessFlags2& dstAccessMask,
@@ -508,6 +625,73 @@ export namespace ufox::gpu::vulkan {
         vk::AccessFlags2        dstAccessMask = GetAccessFlags2(newLayout);
 
         TransitionImageLayout(cmb, image, srcStageMask, dstStageMask, srcAccessMask, dstAccessMask, oldLayout, newLayout, range);
+    }
+
+    vk::raii::CommandBuffer BeginSingleTimeCommands(const vk::raii::Device& device, const vk::raii::CommandPool& commandPool)  {
+        vk::CommandBufferAllocateInfo allocInfo{};
+        allocInfo.setLevel(vk::CommandBufferLevel::ePrimary)
+                 .setCommandPool(*commandPool)
+                 .setCommandBufferCount(1);
+
+        vk::raii::CommandBuffer cmd = std::move(device.allocateCommandBuffers(allocInfo).front());
+        vk::CommandBufferBeginInfo beginInfo{};
+        beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+        cmd.begin(beginInfo);
+
+        return cmd;
+    }
+
+    vk::raii::CommandBuffer BeginSingleTimeCommands(const GPUResources& gpu) {
+        return BeginSingleTimeCommands(*gpu.device, *gpu.commandPool);
+    }
+
+    void EndSingleTimeCommands(const vk::raii::Queue& graphicsQueue, const vk::raii::CommandBuffer &cmd) {
+        cmd.end();
+        vk::SubmitInfo submitInfo{};
+        submitInfo.setCommandBufferCount(1)
+                 .setPCommandBuffers(&*cmd);
+        graphicsQueue.submit(submitInfo, nullptr);
+        graphicsQueue.waitIdle();
+    }
+
+    void EndSingleTimeCommands(const GPUResources& gpu, const vk::raii::CommandBuffer &cmd) {
+        EndSingleTimeCommands(*gpu.graphicsQueue, cmd);
+    }
+
+    void CreateBuffer(const vk::raii::Device& device, const vk::raii::PhysicalDevice& physicalDevice, vk::DeviceSize size, vk::BufferUsageFlags usage,
+                                      vk::MemoryPropertyFlags properties, Buffer &buffer) {
+
+        vk::BufferCreateInfo bufferInfo{};
+        bufferInfo.setSize(size)
+                  .setUsage(usage)
+                  .setSharingMode(vk::SharingMode::eExclusive);
+
+        buffer.data.emplace(device, bufferInfo);
+
+        vk::MemoryRequirements memoryRequirements = buffer.data->getMemoryRequirements();
+        vk::MemoryAllocateInfo memoryAllocateInfo( memoryRequirements.size, FindMemoryType( physicalDevice.getMemoryProperties(),
+                                                   memoryRequirements.memoryTypeBits, properties ) );
+        buffer.memory.emplace(device, memoryAllocateInfo);
+        buffer.data->bindMemory( *buffer.memory, 0 );
+    }
+
+    void CreateBuffer(const GPUResources& gpu, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, Buffer &buffer) {
+        CreateBuffer(*gpu.device, *gpu.physicalDevice, size, usage, properties, buffer);
+    }
+
+    void CopyBuffer(const vk::raii::Device& device, const vk::raii::CommandPool& commandPool,const vk::raii::Queue& graphicsQueue , const Buffer& srcBuffer, const Buffer& dstBuffer, const vk::DeviceSize& size) {
+        vk::raii::CommandBuffer cmd = BeginSingleTimeCommands(device, commandPool);
+
+        vk::BufferCopy copyRegion{};
+        copyRegion.setSize(size);
+        cmd.copyBuffer(*srcBuffer.data, *dstBuffer.data, { copyRegion });
+
+        EndSingleTimeCommands(graphicsQueue,cmd);
+    }
+
+    void CopyBuffer(const GPUResources& gpu,  const Buffer& srcBuffer, const Buffer& dstBuffer, const vk::DeviceSize& size) {
+        CopyBuffer(*gpu.device, *gpu.commandPool, *gpu.graphicsQueue, srcBuffer, dstBuffer, size);
     }
 
 }
