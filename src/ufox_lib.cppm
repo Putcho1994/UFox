@@ -865,9 +865,97 @@ export namespace ufox {
     }
 
 
+namespace geometry {
+        enum class PanelAlignment { eRow, eColumn };
+        enum class PickingMode    { ePosition, eIgnore };
+        enum class ScalingMode    { eFlex, eFixed };
+
+        constexpr uint32_t RESIZER_THICKNESS = 12;
+        constexpr int32_t RESIZER_OFFSET = 6;
+
+        struct Viewpanel {
+            explicit Viewpanel(PanelAlignment align = PanelAlignment::eColumn,PickingMode picking = PickingMode::ePosition,ScalingMode scaling = ScalingMode::eFlex):alignment(align), pickingMode(picking), scalingMode(scaling) {}
+            ~Viewpanel() = default;
 
 
+            vk::Rect2D              rect{{0,0},{0,0}};
+            vk::Rect2D              scalingZone{{0,0},{0,0}};
 
+            Viewpanel*              parent{nullptr};
+            std::vector<Viewpanel*> children;
+
+            PanelAlignment          alignment{PanelAlignment::eColumn};
+            PickingMode             pickingMode{PickingMode::ePosition};
+            ScalingMode             scalingMode{ScalingMode::eFlex};
+
+            vk::ClearColorValue     clearColor{0.5f, 0.5f, 0.5f, 1.0f};
+            vk::ClearColorValue     clearColor2{0.8f, 0.8f, 0.8f, 1.0f};
+
+            float                   scaler{0.0f};
+
+
+            [[nodiscard]] bool isChildrenEmpty() const noexcept { return children.empty(); }
+            [[nodiscard]] size_t getChildrenSize() const noexcept { return children.size(); }
+            [[nodiscard]] Viewpanel* getChild(const size_t i) const noexcept { return children[i]; }
+            [[nodiscard]] size_t getLastChildIndex() const noexcept { return children.size() - 1; }
+            [[nodiscard]] bool isRow() const noexcept { return alignment == PanelAlignment::eRow; }
+            [[nodiscard]] bool isColumn() const noexcept { return alignment == PanelAlignment::eColumn; }
+
+            void add(Viewpanel* child)
+            {
+                if (child && child->parent != this)
+                {
+                    if (child->parent) child->parent->remove(child);
+                    child->parent = this;
+                    children.push_back(child);
+                }
+            }
+
+            void remove(Viewpanel* child)
+            {
+                if (!child) return;
+                auto it = std::find(children.begin(), children.end(), child);
+                if (it != children.end())
+                {
+                    child->parent = nullptr;
+                    children.erase(it);
+                }
+            }
+
+            [[nodiscard]] std::vector<Viewpanel*> GetAllPanels() const &
+            {
+                std::vector<Viewpanel*> result;
+                result.push_back(const_cast<Viewpanel*>(this));
+
+                std::function<void(const Viewpanel&)> collect = [&](const Viewpanel& panel)
+                {
+                    for (size_t i = 0; i < panel.getChildrenSize(); ++i)
+                    {
+                        Viewpanel* child = panel.getChild(i);
+                        result.push_back(child);
+                        collect(*child);
+                    }
+                };
+
+                collect(*this);
+                return result;
+            }
+
+            void SetBackgroundColor(const vk::ClearColorValue& color) {
+                    clearColor = color;
+                }
+
+        };
+
+        struct Viewport {
+            vk::Extent2D                                        extent{};
+            Viewpanel*                                          panel = nullptr;
+            Viewpanel*                                          hoveredPanel = nullptr;
+            Viewpanel*                                          focusedPanel = nullptr;
+            Viewpanel*                                          scaler = nullptr;
+            std::optional<input::EventCallbackPool::Handler>    handleMouseMove{};
+        };
+    }
 
     namespace gui {
 

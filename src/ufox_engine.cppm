@@ -16,7 +16,8 @@ export module ufox_engine;
 import ufox_lib;
 import ufox_graphic_device;
 import ufox_input;
-import ufox_renderer;
+import ufox_geometry;
+import ufox_render;
 import ufox_resource_manager;
 
 
@@ -56,6 +57,10 @@ export namespace ufox {
             if (windowResource->swapchainResource) {
                 windowResource->swapchainResource->Clear();
             }
+
+            if (viewport && inputResource) {
+                geometry::UnbindEvents(*viewport,*inputResource);
+            }
 #ifdef USE_SDL
             SDL_RemoveEventWatch(framebufferResizeCallback, this);
 #endif
@@ -64,30 +69,29 @@ export namespace ufox {
 
         void Init() {
             InitializeGPU();
-            viewport.emplace(*windowResource);
-            viewpanel1.emplace(*viewport, *inputResource,
-                    renderer::PanelAlignment::eRow,renderer::PickingMode::eIgnore);
-            viewpanel2.emplace(*viewport, *inputResource);
+            viewport.emplace();
+            viewpanel1.emplace(geometry::PanelAlignment::eRow,geometry::PickingMode::eIgnore);
+            viewpanel2.emplace();
             viewpanel2->scaler = 0.3f;
             viewpanel2->SetBackgroundColor(vk::ClearColorValue{1.0f, 0.0f, 0.0f, 1.0f});
-            viewpanel3.emplace( *viewport, *inputResource,renderer::PanelAlignment::eColumn);
+            viewpanel3.emplace(geometry::PanelAlignment::eColumn);
             viewpanel3->scaler = 0.7f;
-            viewpanel4.emplace(*viewport, *inputResource);
+            viewpanel4.emplace();
             viewpanel4->scaler = 0.6f;
             viewpanel4->SetBackgroundColor(vk::ClearColorValue{0.0f, 0.0f, 1.0f, 1.0f});
-            viewpanel5.emplace(*viewport, *inputResource, renderer::PanelAlignment::eRow);
+            viewpanel5.emplace(geometry::PanelAlignment::eRow);
             viewpanel5->scaler = 0.5f;
             viewpanel5->SetBackgroundColor(vk::ClearColorValue{0.0f, 1.0f, 0.0f, 1.0f});
-            viewpanel6.emplace(*viewport, *inputResource);
+            viewpanel6.emplace();
             viewpanel6->scaler = 0.5f;
             viewpanel6->SetBackgroundColor(vk::ClearColorValue{1.0f, 1.0f, 0.0f, 1.0f});
-            viewpanel7.emplace(*viewport, *inputResource);
+            viewpanel7.emplace();
             viewpanel7->scaler = 0.3f;
             viewpanel7->SetBackgroundColor(vk::ClearColorValue{1.0f, 0.0f, 1.0f, 1.0f});
-            viewpanel8.emplace(*viewport, *inputResource);
+            viewpanel8.emplace();
             viewpanel8->scaler = 0.6f;
             viewpanel8->SetBackgroundColor(vk::ClearColorValue{0.5f, 0.5f, 0.5f, 1.0f});
-            viewpanel9.emplace(*viewport, *inputResource);
+            viewpanel9.emplace();
             viewpanel9->scaler = 0.5f;
             viewpanel9->SetBackgroundColor(vk::ClearColorValue{0.5f, 0.7f, 0.5f, 1.0f});
 
@@ -112,7 +116,8 @@ export namespace ufox {
 
             int width = 0, height = 0;
             windowResource->getExtent(width, height);
-            viewport->onResize(width, height);
+            geometry::ResizingViewport(*viewport, width, height);
+            geometry::BindEvents(*viewport,*inputResource);
         }
 
         void Run() {
@@ -354,15 +359,13 @@ export namespace ufox {
 
 
             cmb.endRendering();
-            viewpanel4->onProcessingRendering(cmb, *windowResource);
 
-            viewpanel2->onProcessingRendering(cmb, *windowResource);
-
-
-            viewpanel6->onProcessingRendering(cmb, *windowResource);
-            viewpanel7->onProcessingRendering(cmb, *windowResource);
-            viewpanel8->onProcessingRendering(cmb, *windowResource);
-            viewpanel9->onProcessingRendering(cmb, *windowResource);
+            render::RenderArea(cmb, *windowResource, viewpanel4->rect, viewpanel4->clearColor);
+            render::RenderArea(cmb, *windowResource, viewpanel2->rect, viewpanel2->clearColor);
+            render::RenderArea(cmb, *windowResource, viewpanel6->rect, viewpanel6->clearColor);
+            render::RenderArea(cmb, *windowResource, viewpanel7->rect, viewpanel7->clearColor);
+            render::RenderArea(cmb, *windowResource, viewpanel8->rect, viewpanel8->clearColor);
+            render::RenderArea(cmb, *windowResource, viewpanel9->rect, viewpanel9->clearColor);
 
 
             gpu::vulkan::TransitionImageLayout(cmb, windowResource->swapchainResource->getCurrentImage(),
@@ -379,7 +382,8 @@ export namespace ufox {
                 SDL_GetWindowSize(win, &width, &height);
                 app->framebufferResized = true;
                 app->recreateSwapchain(width, height);
-                app->viewport->onResize(width, height);
+                geometry::ResizingViewport(*app->viewport, width, height);
+
                 app->drawFrame();
             }
             return true;
@@ -452,16 +456,16 @@ export namespace ufox {
         std::optional<gpu::vulkan::FrameResource>   frameResource{};
         std::optional<input::InputResource>         inputResource{};
         std::optional<ResourceManager>              resourceManager{};
-        std::optional<renderer::Viewport>           viewport{};
-        std::optional<renderer::Viewpanel>          viewpanel1{};
-        std::optional<renderer::Viewpanel>          viewpanel2{};
-        std::optional<renderer::Viewpanel>          viewpanel3{};
-        std::optional<renderer::Viewpanel>          viewpanel4{};
-        std::optional<renderer::Viewpanel>          viewpanel5{};
-        std::optional<renderer::Viewpanel>          viewpanel6{};
-        std::optional<renderer::Viewpanel>          viewpanel7{};
-        std::optional<renderer::Viewpanel>          viewpanel8{};
-        std::optional<renderer::Viewpanel>          viewpanel9{};
+        std::optional<geometry::Viewport>           viewport{};
+        std::optional<geometry::Viewpanel>          viewpanel1{};
+        std::optional<geometry::Viewpanel>          viewpanel2{};
+        std::optional<geometry::Viewpanel>          viewpanel3{};
+        std::optional<geometry::Viewpanel>          viewpanel4{};
+        std::optional<geometry::Viewpanel>          viewpanel5{};
+        std::optional<geometry::Viewpanel>          viewpanel6{};
+        std::optional<geometry::Viewpanel>          viewpanel7{};
+        std::optional<geometry::Viewpanel>          viewpanel8{};
+        std::optional<geometry::Viewpanel>          viewpanel9{};
 
         bool framebufferResized = false;
         bool pauseRendering = false;
