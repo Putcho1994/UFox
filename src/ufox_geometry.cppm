@@ -33,7 +33,7 @@ export namespace ufox::geometry {
 
         for (size_t i = 0; i < viewpanel.getChildrenSize(); ++i) {
             Viewpanel* child = viewpanel.getChild(i);
-            float ratio = glm::clamp(child->scaler, 0.0f, 1.0f);
+            float ratio = glm::clamp(child->scaleValue, 0.0f, 1.0f);
             uint32_t sizeValue;
 
             if (viewpanel.isRow()) {
@@ -42,7 +42,7 @@ export namespace ufox::geometry {
                     width;
                 BuildPanelLayout(*child, x, y, sizeValue - x + posX, height);
                 x = static_cast<int32_t>(sizeValue) + posX;
-                child->scalingZone = i < lastChildIndex ?
+                child->scalerZone = i < lastChildIndex ?
                     vk::Rect2D{vk::Offset2D{x - RESIZER_OFFSET, y}, vk::Extent2D{RESIZER_THICKNESS, height}} :
                     vk::Rect2D{{0,0}, {0,0}};
             } else {
@@ -51,7 +51,7 @@ export namespace ufox::geometry {
                     height;
                 BuildPanelLayout(*child, x, y, width, sizeValue - y + posY);
                 y = static_cast<int32_t>(sizeValue) + posY;
-                child->scalingZone = i < lastChildIndex ?
+                child->scalerZone = i < lastChildIndex ?
                     vk::Rect2D{vk::Offset2D{x, y - RESIZER_OFFSET}, vk::Extent2D{width, RESIZER_THICKNESS}} :
                     vk::Rect2D{{0,0}, {0,0}};
             }
@@ -98,10 +98,10 @@ export namespace ufox::geometry {
         if (!viewpanel.parent) return;
 
         const bool overResizer =
-            mx > viewpanel.scalingZone.offset.x &&
-            my > viewpanel.scalingZone.offset.y &&
-            mx < viewpanel.scalingZone.offset.x + static_cast<int32_t>(viewpanel.scalingZone.extent.width) &&
-            my < viewpanel.scalingZone.offset.y + static_cast<int32_t>(viewpanel.scalingZone.extent.height);
+            mx > viewpanel.scalerZone.offset.x &&
+            my > viewpanel.scalerZone.offset.y &&
+            mx < viewpanel.scalerZone.offset.x + static_cast<int32_t>(viewpanel.scalerZone.extent.width) &&
+            my < viewpanel.scalerZone.offset.y + static_cast<int32_t>(viewpanel.scalerZone.extent.height);
 
         if (overResizer)
         {
@@ -123,7 +123,7 @@ export namespace ufox::geometry {
     {
         if (!viewport.panel) return;
 
-        viewport.handleMouseMove.emplace(input.onMouseMoveCallbackPool.bind([&viewport](input::InputResource& i) {
+        viewport.mouseMoveEventHandle.emplace(input.onMouseMoveCallbackPool.bind([&viewport](input::InputResource& i) {
 
                             auto allPanels = viewport.panel->GetAllPanels();
 
@@ -133,13 +133,28 @@ export namespace ufox::geometry {
                                 }
                             }
         }));
+
+        viewport.leftClickEventHandle.emplace(input.onLeftMouseButtonCallbackPool.bind([&viewport](input::InputResource& i) {
+            if (i.leftMouseButtonAction.phase == input::ActionPhase::eStart) {
+                //prepare resizer context
+            }
+            else if (i.leftMouseButtonAction.phase == input::ActionPhase::ePerform) {
+                //resizing logic
+            }
+            else if (i.leftMouseButtonAction.phase == input::ActionPhase::eEnd) {
+                //finalize resize and reset context
+            }
+        }));
     }
 
     void UnbindEvents(Viewport& viewport, input::InputResource& input)
     {
-        if (!viewport.handleMouseMove.has_value()) return;
-        input.onMouseMoveCallbackPool.unbind(viewport.handleMouseMove->index);
-        viewport.handleMouseMove.reset();
+        if (!viewport.mouseMoveEventHandle.has_value()) return;
+        input.onMouseMoveCallbackPool.unbind(viewport.mouseMoveEventHandle->index);
+        viewport.mouseMoveEventHandle.reset();
+        if (!viewport.leftClickEventHandle.has_value()) return;
+        input.onLeftMouseButtonCallbackPool.unbind(viewport.leftClickEventHandle->index);
+        viewport.leftClickEventHandle.reset();
     }
 
 

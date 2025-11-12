@@ -1,7 +1,7 @@
 module;
 
 
-
+#include <chrono>
 #include <utility>
 
 #include <vector>
@@ -15,6 +15,7 @@ module;
 #include <format>
 
 #include <functional>
+#include <ranges>
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -40,7 +41,7 @@ export module ufox_lib;
 
 export namespace ufox {
     namespace utilities {
-        size_t GenerateUniqueID(const std::vector<glm::vec4>& fields) {
+        constexpr size_t GenerateUniqueID(const std::vector<glm::vec4>& fields) {
             std::hash<float> floatHasher;
             size_t hash = 0;
 
@@ -65,72 +66,63 @@ export namespace ufox {
 
         // Hash a vector of floats
 
-        size_t GenerateUniqueID(const std::vector<float>& fields) {
-
+        constexpr size_t GenerateUniqueID(const std::vector<float>& fields) {
             std::hash<float> floatHasher;
-
             size_t hash = 0;
 
             auto combineHash = [&hash](size_t value) {
-
                 hash ^= value + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-
             };
 
             auto combineFloat = [&combineHash, &floatHasher](float value) {
-
                 float normalized = std::round(value * 1000000.0f) / 1000000.0f;
-
                 combineHash(floatHasher(normalized));
-
             };
 
             for (float value : fields) {
-
                 combineFloat(value);
-
             }
-
             return hash;
+        }
 
+        constexpr  size_t GenerateUniqueID(std::string_view sv) {
+            std::vector<float> chars;
+            chars.reserve(sv.size());
+            for (char c : sv) {
+                chars.push_back(static_cast<unsigned char>(c));
+            }
+            return GenerateUniqueID(chars);
+        }
+
+        constexpr  size_t GenerateUniqueID(const char* str) {
+            return GenerateUniqueID(std::string_view(str));
+        }
+
+        constexpr size_t GenerateUniqueID(const std::string& str) {
+            return GenerateUniqueID(std::string_view(str));
         }
 
     }
 
     namespace debug {
-
         enum class LogLevel {
-
             eInfo,
-
             eWarning,
-
             eError
-
         };
-
-
 
         template<typename... Args>
 
         void log(LogLevel level, const std::string& format_str, Args&&... args) {
-
             std::string level_str;
-
             switch (level) {
-
                 case LogLevel::eInfo:    level_str = "INFO"; break;
-
                 case LogLevel::eWarning: level_str = "WARNING"; break;
-
                 case LogLevel::eError:   level_str = "ERROR"; break;
-
             }
 
             std::string message = std::vformat(format_str, std::make_format_args(args...));
-
             std::cout << std::format("[{}] {}\n", level_str, message);
-
         }
 
     }
@@ -683,12 +675,28 @@ export namespace ufox {
             eSEResize
         };
 
+        enum class ActionPhase {
+            eWait,
+            eStart,
+            ePerform,
+            eEnd,
+            eReset,
+            eRepeat,
+            eSleep
+        };
+
         enum class MouseButtonState {
             eNone,
             eDown,
             eUp,
             eHold,
         };
+
+        enum class MouseButton {
+            eNone,eLeft, eRight, eMiddle
+        };
+
+
 
 
         struct EventCallbackPool {
@@ -750,6 +758,60 @@ export namespace ufox {
             std::vector<std::size_t> free_list;
         };
 
+        struct Action {
+            explicit Action(const std::string &name_, const std::chrono::milliseconds& timeout_) : id(utilities::GenerateUniqueID(name_)) , name(name_), timeout(timeout_) {
+                debug::log(debug::LogLevel::eInfo, "InputAction CREATED: {} [id: {:#x}]", name, id);
+            }
+            ~Action() = default;
+
+            const uint32_t                          id;
+            const std::string                       name;
+            ActionPhase                             phase = ActionPhase::eSleep;
+            float                                   value1 = 0.0f;
+            float                                   value2 = 0.0f;
+            bool                                    isStarted{false};
+            bool                                    isPerformed{false};
+            bool                                    isEnded{false};
+            uint32_t                                triggerCount{0};
+
+            std::chrono::steady_clock::time_point   startTime = std::chrono::steady_clock::now();
+            std::chrono::milliseconds               timeout{1000};
+
+            void refresh() noexcept {
+                if (phase == ActionPhase::eStart && isStarted) {
+                    phase = ActionPhase::ePerform;
+                }else if (phase == ActionPhase::eEnd && isEnded) {
+                    phase = std::chrono::steady_clock::now() - startTime > timeout? ActionPhase::eReset : ActionPhase::eRepeat;
+                }else if (phase == ActionPhase::eRepeat) {
+                    isStarted = false;
+                    isPerformed = false;
+                    isEnded = false;
+                    phase = ActionPhase::eWait;
+                }
+                else if (phase == ActionPhase::eReset) {
+                    isStarted = false;
+                    isPerformed = false;
+                    isEnded = false;
+                    debug::log(debug::LogLevel::eInfo, "InputAction RESET: {} [id: {:#x}]", name, id);
+                    triggerCount = 0;
+                    phase = ActionPhase::eSleep;
+                }
+            }
+
+            void perform() noexcept {
+                if (phase == ActionPhase::eStart) {
+                    triggerCount++;
+                    isStarted = true;
+                }else if (phase == ActionPhase::ePerform && !isPerformed) {
+                    isPerformed = true;
+                }else if (phase == ActionPhase::eEnd) {
+                    isEnded = true;
+                }else if (phase == ActionPhase::eWait) {
+                    phase = std::chrono::steady_clock::now() - startTime > timeout? ActionPhase::eReset : ActionPhase::eWait;
+                }
+            }
+        };
+
         enum class MouseMotionState : uint8_t {
             Idle,     // No movement
             Moving,   // Delta > 0
@@ -765,26 +827,33 @@ export namespace ufox {
             }
         }
 
-
-
         struct InputResource {
             glm::ivec2 mousePosition{0,0};
             glm::ivec2 mouseDelta{0, 0};
             glm::ivec2 mouseWheel{0,0};
 
             MouseMotionState mouseMotionState{MouseMotionState::Idle};
+            Action leftMouseButtonAction{"left-mouse-button", std::chrono::milliseconds{500}};
+            Action rightMouseButtonAction{"right-mouse-button", std::chrono::milliseconds{500}};
+            Action middleMouseButtonAction{"middle-mouse-button", std::chrono::milliseconds{500}};
+
 
             EventCallbackPool onMouseMoveCallbackPool{};
             EventCallbackPool onMouseStopCallbackPool{};
-            EventCallbackPool onMouseDownCallbackPool{};
-            EventCallbackPool onMouseUpCallbackPool{};
             EventCallbackPool onMouseWheelCallbackPool{};
+
+            EventCallbackPool onLeftMouseButtonCallbackPool{};
+            EventCallbackPool onRightMouseButtonCallbackPool{};
+            EventCallbackPool onMiddleMouseButtonCallbackPool{};
 
             bool mouseLeftButton{false}, mouseRightButton{false}, mouseMiddleButton{false};
 
             CursorType currentCursor{CursorType::eDefault};
 
-            void refresh() noexcept { mouseWheel = {0,0}; }
+            void refresh() noexcept {
+                mouseWheel = {0,0};
+                leftMouseButtonAction.refresh();
+            }
             void updateMouseDelta(const glm::ivec2& pos) noexcept { mouseDelta = pos - mousePosition; }
             [[nodiscard]] float getMouseDeltaMagnitude() const noexcept { return glm::length(glm::vec2(mouseDelta)); }
 
@@ -796,12 +865,19 @@ export namespace ufox {
                 onMouseStopCallbackPool.invoke(*this);
             }
 
-            void onMouseDown() {
-                onMouseDownCallbackPool.invoke(*this);
+            void onLeftMouseButton() {
+
+                leftMouseButtonAction.perform();
+
+                onLeftMouseButtonCallbackPool.invoke(*this);
             }
 
-            void onMouseUp() {
-                onMouseUpCallbackPool.invoke(*this);
+            void onRightMouseButton() {
+                onRightMouseButtonCallbackPool.invoke(*this);
+            }
+
+            void onMiddleMouseButton() {
+                onMiddleMouseButtonCallbackPool.invoke(*this);
             }
 
             void onMouseWheel() {
@@ -850,6 +926,7 @@ export namespace ufox {
                 }
             }
 
+
         private:
 #ifdef USE_SDL
             std::unique_ptr<SDL_Cursor, decltype(&SDL_DestroyCursor)> _defaultCursor ={SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT), SDL_DestroyCursor};
@@ -879,7 +956,7 @@ namespace geometry {
 
 
             vk::Rect2D              rect{{0,0},{0,0}};
-            vk::Rect2D              scalingZone{{0,0},{0,0}};
+            vk::Rect2D              scalerZone{{0,0},{0,0}};
 
             Viewpanel*              parent{nullptr};
             std::vector<Viewpanel*> children;
@@ -891,7 +968,7 @@ namespace geometry {
             vk::ClearColorValue     clearColor{0.5f, 0.5f, 0.5f, 1.0f};
             vk::ClearColorValue     clearColor2{0.8f, 0.8f, 0.8f, 1.0f};
 
-            float                   scaler{0.0f};
+            float                   scaleValue{0.0f};
 
 
             [[nodiscard]] bool isChildrenEmpty() const noexcept { return children.empty(); }
@@ -953,7 +1030,8 @@ namespace geometry {
             Viewpanel*                                          hoveredPanel = nullptr;
             Viewpanel*                                          focusedPanel = nullptr;
             Viewpanel*                                          scaler = nullptr;
-            std::optional<input::EventCallbackPool::Handler>    handleMouseMove{};
+            std::optional<input::EventCallbackPool::Handler>    mouseMoveEventHandle{};
+            std::optional<input::EventCallbackPool::Handler>    leftClickEventHandle{};
         };
     }
 

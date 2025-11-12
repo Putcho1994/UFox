@@ -61,6 +61,8 @@ export namespace ufox {
             if (viewport && inputResource) {
                 geometry::UnbindEvents(*viewport,*inputResource);
             }
+
+
 #ifdef USE_SDL
             SDL_RemoveEventWatch(framebufferResizeCallback, this);
 #endif
@@ -72,32 +74,32 @@ export namespace ufox {
             viewport.emplace();
             viewpanel1.emplace(geometry::PanelAlignment::eRow,geometry::PickingMode::eIgnore);
             viewpanel2.emplace();
-            viewpanel2->scaler = 0.3f;
+            viewpanel2->scaleValue = 0.3f;
             viewpanel2->SetBackgroundColor(vk::ClearColorValue{1.0f, 0.0f, 0.0f, 1.0f});
             viewpanel3.emplace(geometry::PanelAlignment::eColumn);
-            viewpanel3->scaler = 0.7f;
+            viewpanel3->scaleValue = 0.7f;
             viewpanel4.emplace();
-            viewpanel4->scaler = 0.6f;
+            viewpanel4->scaleValue = 0.6f;
             viewpanel4->SetBackgroundColor(vk::ClearColorValue{0.0f, 0.0f, 1.0f, 1.0f});
             viewpanel5.emplace(geometry::PanelAlignment::eRow);
-            viewpanel5->scaler = 0.5f;
+            viewpanel5->scaleValue = 0.5f;
             viewpanel5->SetBackgroundColor(vk::ClearColorValue{0.0f, 1.0f, 0.0f, 1.0f});
             viewpanel6.emplace();
-            viewpanel6->scaler = 0.5f;
+            viewpanel6->scaleValue = 0.5f;
             viewpanel6->SetBackgroundColor(vk::ClearColorValue{1.0f, 1.0f, 0.0f, 1.0f});
             viewpanel7.emplace();
-            viewpanel7->scaler = 0.3f;
+            viewpanel7->scaleValue = 0.3f;
             viewpanel7->SetBackgroundColor(vk::ClearColorValue{1.0f, 0.0f, 1.0f, 1.0f});
             viewpanel8.emplace();
-            viewpanel8->scaler = 0.6f;
+            viewpanel8->scaleValue = 0.6f;
             viewpanel8->SetBackgroundColor(vk::ClearColorValue{0.5f, 0.5f, 0.5f, 1.0f});
             viewpanel9.emplace();
-            viewpanel9->scaler = 0.5f;
+            viewpanel9->scaleValue = 0.5f;
             viewpanel9->SetBackgroundColor(vk::ClearColorValue{0.5f, 0.7f, 0.5f, 1.0f});
 
 
             viewport->panel = &*viewpanel1;
-            viewpanel1->scaler =0;
+            viewpanel1->scaleValue =0;
             viewpanel1->add(&*viewpanel2);
             viewpanel1->add(&*viewpanel3);
             viewpanel1->add(&*viewpanel4);
@@ -118,6 +120,8 @@ export namespace ufox {
             windowResource->getExtent(width, height);
             geometry::ResizingViewport(*viewport, width, height);
             geometry::BindEvents(*viewport,*inputResource);
+
+
         }
 
         void Run() {
@@ -146,7 +150,7 @@ export namespace ufox {
         void beginUpdate() {
             input::RefreshResources(*inputResource);
             input::UpdateGlobalMousePosition(*windowResource, *inputResource);
-
+            input::UpdateMouseButtonAction(*inputResource);
         }
 
         void update() {
@@ -417,6 +421,30 @@ export namespace ufox {
 
                         break;
                     }
+                    case SDL_EVENT_MOUSE_BUTTON_DOWN:{
+                        input::MouseButton button = input::MouseButton::eNone;
+                        input::ActionPhase phase = input::ActionPhase::eStart;
+
+                        if (event.button.button == SDL_BUTTON_LEFT) {button = input::MouseButton::eLeft;}
+                        else if (event.button.button == SDL_BUTTON_RIGHT) {button = input::MouseButton::eRight;}
+                        else if (event.button.button == SDL_BUTTON_MIDDLE) {button = input::MouseButton::eMiddle;}
+
+                        input::CatchMouseButton(*inputResource, button, phase, 1,0);
+
+                        break;
+                    }
+                    case SDL_EVENT_MOUSE_BUTTON_UP: {
+                        input::MouseButton button = input::MouseButton::eNone;
+                        input::ActionPhase phase = input::ActionPhase::eEnd;
+
+                        if (event.button.button == SDL_BUTTON_LEFT) {button = input::MouseButton::eLeft;}
+                        else if (event.button.button == SDL_BUTTON_RIGHT) {button = input::MouseButton::eRight;}
+                        else if (event.button.button == SDL_BUTTON_MIDDLE) {button = input::MouseButton::eMiddle;}
+
+                        input::CatchMouseButton(*inputResource, button, phase,0,0);
+
+                        break;
+                    }
 
                     default: {}
                 }
@@ -472,6 +500,7 @@ export namespace ufox {
         std::optional<geometry::Viewpanel>          viewpanel7{};
         std::optional<geometry::Viewpanel>          viewpanel8{};
         std::optional<geometry::Viewpanel>          viewpanel9{};
+        std::optional<input::EventCallbackPool::Handler> mouseButtonHandler{};
 
         bool framebufferResized = false;
         bool pauseRendering = false;

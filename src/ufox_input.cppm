@@ -1,5 +1,6 @@
 module;
 
+#include <chrono>
 #include <memory>
 #include <SDL3/SDL_mouse.h>
 #include <glm/glm.hpp>
@@ -15,8 +16,6 @@ export module ufox_input;
 import ufox_lib;  // For GenerateUniqueID
 
 export  namespace ufox::input {
-
-
 
     void RefreshResources(InputResource& res) {
         res.refresh();
@@ -55,118 +54,39 @@ export  namespace ufox::input {
         }
     }
 
+    void UpdateMouseButtonAction(InputResource& res) {
+        if (res.leftMouseButtonAction.phase != ActionPhase::eSleep) {
+            res.onLeftMouseButton();
+        }
 
-    // auto GetGlobalMousePosition() {
-    //     float x,y;
-    //     SDL_GetGlobalMouseState(&x,&y);
-    //     return std::make_pair(x,y);
-    // }
-    //
-    // void updateMousePositionInsideWindow() {
-    //     SDL_GetMouseState(&currentLocalMouseX, &currentLocalMouseY);
-    //     //fmt::println("position inside x:{} y:{}", currentLocalMouseX, currentLocalMouseY);
-    // }
-    //
-    // void updateMousePositionOutsideWindow(SDL_Window *window) {
-    //     if (!mouseIsOutSideWindow) return;
-    //
-    //     SDL_GetGlobalMouseState(&currentGlobalMouseX, &currentGlobalMouseY);
-    //     if (currentGlobalMouseX == previousGlobalMouseX && currentGlobalMouseY == previousGlobalMouseY) return;
-    //
-    //     int xPos,yPos;
-    //     SDL_GetWindowPosition(window, &xPos, &yPos);
-    //     currentLocalMouseX = currentGlobalMouseX - xPos;
-    //     currentLocalMouseY = currentGlobalMouseY - yPos;
-    //     previousGlobalMouseX = currentGlobalMouseX;
-    //     previousGlobalMouseY = currentGlobalMouseY;
-    //     //fmt::println("position outside x:{} y:{}", currentLocalMouseX, currentLocalMouseY);
-    //
-    // }
-    //
-    // void enabledMousePositionOutside(bool state) {
-    //         if (mouseIsOutSideWindow != state)
-    //             mouseIsOutSideWindow = state;
-    // }
-    //
-    // void updateMouseEvents(const SDL_Event &event) {
-    //     _isMouseButtonDown = false;
-    //     _isMouseButtonUp = false;
-    //
-    //
-    //     switch (event.type) {
-    //         case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-    //             _isMouseButtonDown = true;
-    //
-    //             break;
-    //         }
-    //         case SDL_EVENT_MOUSE_BUTTON_UP: {
-    //             _isMouseButtonUp = true;
-    //
-    //             break;
-    //         }
-    //         case SDL_EVENT_MOUSE_MOTION: {
-    //
-    //             enabledMousePositionOutside(false);
-    //             updateMousePositionInsideWindow();
-    //             break;
-    //         }
-    //         case SDL_EVENT_WINDOW_FOCUS_LOST: {
-    //             enabledMousePositionOutside(false);
-    //             break;
-    //         }
-    //         case SDL_EVENT_WINDOW_FOCUS_GAINED: {
-    //             enabledMousePositionOutside(true);
-    //             break;
-    //         }
-    //         default: {
-    //             if (event.motion.x == 0 || event.motion.y == 0) {
-    //                 enabledMousePositionOutside(true);
-    //             }
-    //         }
-    //     }
-    // }
+        if (res.rightMouseButtonAction.phase != ActionPhase::eSleep) {
+            res.onRightMouseButton();
+        }
 
+        if (res.middleMouseButtonAction.phase != ActionPhase::eSleep) {
+            res.onMiddleMouseButton();
+        }
+    }
 
-    // void setCursor(const CursorType type) {
-    //     if (currentCursor != type) {
-    //         switch (type) {
-    //             case CursorType::eDefault: {
-    //                 SDL_SetCursor(_defaultCursor.get());
-    //                 break;
-    //             }
-    //             case CursorType::eEWResize: {
-    //                 SDL_SetCursor(_ewResizeCursor.get());
-    //                 break;
-    //             }
-    //             case CursorType::eNSResize: {
-    //                 SDL_SetCursor(_nsResizeCursor.get());
-    //                 break;
-    //             }
-    //             case CursorType::eNWResize: {
-    //                 SDL_SetCursor(_nwResizeCursor.get());
-    //                 break;
-    //             }
-    //             case CursorType::eNEResize: {
-    //                 SDL_SetCursor(_neResizeCursor.get());
-    //                 break;
-    //             }
-    //             case CursorType::eSWResize: {
-    //                 SDL_SetCursor(_swResizeCursor.get());
-    //                 break;
-    //             }
-    //                 case CursorType::eSEResize: {
-    //                 SDL_SetCursor(_seResizeCursor.get());
-    //                 break;
-    //             }
-    //             default: {
-    //                 currentCursor = CursorType::eDefault;
-    //                 SDL_SetCursor(_defaultCursor.get());
-    //                 break;
-    //             }
-    //         }
-    //
-    //         currentCursor = type;
-    //     }
+    void CatchMouseButton(InputResource& res, MouseButton button, ActionPhase phase, const float& value1, const float& value2) {
+        if (button == MouseButton::eLeft) {
+            res.leftMouseButtonAction.phase = phase;
+            res.leftMouseButtonAction.value1 = value1;
+            res.leftMouseButtonAction.value2 = value2;
+            res.leftMouseButtonAction.startTime = std::chrono::steady_clock::now();
+        }else if (button == MouseButton::eRight) {
+            res.rightMouseButtonAction.phase = phase;
+            res.rightMouseButtonAction.value1 = value1;
+            res.rightMouseButtonAction.value2 = value2;
+            res.rightMouseButtonAction.startTime = std::chrono::steady_clock::now();
+        }else if (button == MouseButton::eMiddle) {
+            res.middleMouseButtonAction.phase = phase;
+            res.middleMouseButtonAction.value1 = value1;
+            res.middleMouseButtonAction.value2 = value2;
+            res.middleMouseButtonAction.startTime = std::chrono::steady_clock::now();
+        }
+    }
+
     }
 
 
