@@ -53,7 +53,7 @@ root_distance / num_segments = 800 / 4 = 200
 **Formula**:
 
 ```
-SegmentDistanceₙ root_distance / accumulateRatio * segmentRatioₙ
+SegmentDistanceₙ = root_distance / accumulateRatio * segmentRatioₙ
 ```
 
 **Results**:
