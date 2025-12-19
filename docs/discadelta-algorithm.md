@@ -69,7 +69,7 @@ SegmentDistanceₙ = root_distance / accumulateRatio * segmentRatioₙ
 
 **Total**: `799.999999` (rounds to `800` due to floating-point precision).
 
-![Discadelta: Raw ratio demand example – ratios 0.1:1.0:2.0:0.5 → proportional sizes ~22|222|444|111](images/DiscadeltaDocImage02.jpg)
+![Discadelta: segment with share ratio](images/DiscadeltaDocImage02.jpg)
 
 This demonstrates pure proportional sharing — small ratios get tiny shares, large ratios dominate.
 
@@ -103,6 +103,9 @@ Now each segment has two parts:
 shareDeltaₙ = remainingDistance / accumulateRatio * segmentRatioₙ
 SegmentDistanceₙ = baseDistanceₙ + shareDeltaₙ
 ```
+
+![Discadelta: segment with base sample](images\DiscadeltaDocImage03.jpg)
+
 **Results**:
 
 | Segment | Distance           |

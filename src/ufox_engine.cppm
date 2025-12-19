@@ -406,15 +406,35 @@ export namespace ufox {
             vk::ClearColorValue c7 = viewport->hoveredPanel == &viewpanel7.value()? vk::ClearColorValue{0.8f, 0.8f, 0.8f, 1.0f}: viewpanel7->clearColor;
             vk::ClearColorValue c8 = viewport->hoveredPanel == &viewpanel8.value()? vk::ClearColorValue{0.8f, 0.8f, 0.8f, 1.0f}: viewpanel8->clearColor;
             vk::ClearColorValue c9 = viewport->hoveredPanel == &viewpanel9.value()? vk::ClearColorValue{0.8f, 0.8f, 0.8f, 1.0f}: viewpanel9->clearColor;
-            vk::ClearColorValue c10 = viewport->hoveredPanel == &viewpanel10.value()? vk::ClearColorValue{0.8f, 0.8f, 0.8f, 1.0f}: viewpanel10->clearColor;
+            vk::ClearColorValue c10 =viewport->hoveredPanel == &viewpanel10.value()? vk::ClearColorValue{0.8f, 0.8f, 0.8f, 1.0f}: viewpanel10->clearColor;
+            vk::ClearColorValue bbc = vk::ClearColorValue{0.8f,0.8f,0.8f,1.0f};
             render::RenderArea(cmb, *windowResource, viewpanel2->rect, c2);
             render::RenderArea(cmb, *windowResource, viewpanel4->rect, c4);
-            render::RenderArea(cmb, *windowResource, viewpanel5->rect, vk::ClearColorValue{1.0f, 1.0f, 1.0f, 1.0f});
             render::RenderArea(cmb, *windowResource, viewpanel6->rect, c6);
-             render::RenderArea(cmb, *windowResource, viewpanel7->rect, c7);
-             render::RenderArea(cmb, *windowResource, viewpanel8->rect, c8);
-             render::RenderArea(cmb, *windowResource, viewpanel9->rect, c9);
-             render::RenderArea(cmb, *windowResource, viewpanel10->rect, c10);
+            render::RenderArea(cmb, *windowResource, viewpanel7->rect, c7);
+            render::RenderArea(cmb, *windowResource, viewpanel8->rect, c8);
+            render::RenderArea(cmb, *windowResource, viewpanel9->rect, c9);
+            render::RenderArea(cmb, *windowResource, viewpanel10->rect, c10);
+            auto w7 = static_cast<uint32_t>(viewpanel7->layout.baseWidth);
+            auto h7 = static_cast<uint32_t>(viewpanel7->rect.extent.height);
+            auto r7 = vk::Rect2D{viewpanel7->rect.offset, vk::Extent2D{w7, h7}};
+            render::RenderArea(cmb, *windowResource, r7,{ 0.8f, 0.0f, 0.8f, 1.0f});
+            auto w8 = static_cast<uint32_t>(viewpanel8->layout.baseWidth);
+            auto h8 = static_cast<uint32_t>(viewpanel8->rect.extent.height);
+            auto r8 = vk::Rect2D{viewpanel8->rect.offset, vk::Extent2D{w8, h8}};
+            render::RenderArea(cmb, *windowResource, r8, {0.3f, 0.3f, 0.3f, 1.0f});
+            auto w9 = static_cast<uint32_t>(viewpanel9->layout.baseWidth);
+            auto h9 = static_cast<uint32_t>(viewpanel9->rect.extent.height);
+            auto r9 = vk::Rect2D{viewpanel9->rect.offset, vk::Extent2D{w9, h9}};
+            render::RenderArea(cmb, *windowResource, r9, {0.3f, 0.5f, 0.3f, 1.0f});
+            auto w10 = static_cast<uint32_t>(viewpanel10->layout.baseWidth);
+            auto h10 = static_cast<uint32_t>(viewpanel10->rect.extent.height);
+            auto r10 = vk::Rect2D{viewpanel10->rect.offset, vk::Extent2D{w10, h10}};
+            render::RenderArea(cmb, *windowResource, r10, {0.3f, 0.3f, 0.5f, 1.0f});
+            auto w6 = w7 + w8 + w9 + w10;
+            auto h6 = static_cast<uint32_t>(viewpanel6->rect.extent.height);
+            auto r6 = vk::Rect2D{viewpanel6->rect.offset, vk::Extent2D{w6, h6}};
+            render::RenderArea(cmb, *windowResource, r6, {0.8f, 0.8f, 0.0f, 1.0f});
 
 
             gpu::vulkan::TransitionImageLayout(cmb, windowResource->swapchainResource->getCurrentImage(),
