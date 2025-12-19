@@ -21,12 +21,13 @@ It powers fit rect layout in UFox’s GUI/Editor system, but is also designed to
 Calculate the distance of an individual segment given the root distance.
 
 ### Fair Share Scenario (No Demands)
-**Root distance**: `800`
 
 **Formula**:
+> **root_distance** = `800`
 
-> **SegmentDistanceₙ** = `800 (root_distance)` / `4 (num_segments)`
+> **num_segments** = `4`
 
+> **SegmentDistanceₙ** = `root_distance` / `num_segments`
 
 **Results**:
 
@@ -42,7 +43,6 @@ Calculate the distance of an individual segment given the root distance.
 Logically, each segment should get **200**. However, it becomes complex if each segment has its own **demand** determining its proportional share.
 
 ### Proportional Demand Scenario (Ratios Only)
-**Root distance**: `800` (no fixed sizes)
 
 **Ratios**:
 
@@ -53,13 +53,12 @@ Logically, each segment should get **200**. However, it becomes complex if each 
 | 3       | 2.0       |
 | 4       | 0.5       |
 
-
-
 **Formula**:
+> **root_distance** = `800`
+
 > **Accumulated ratio** = `0.1` + `1.0` + `2.0` + `0.5` = `3.6`
 
 > **SegmentDistanceₙ** = `root_distance` / `accumulateRatio` * `segmentRatioₙ`
-
 
 **Results**:
 
@@ -85,7 +84,7 @@ Now each segment has two parts:
 - **Base distance** — the default size that must be satisfied first.
 - **Share ratio factor** — share of any **leftover** space after bases.
 
-**Scenario** (root distance **800**):
+**Scenario**:
 
 | Segment | Base Demand | Ratio |
 |---------|-------------|-------|
@@ -95,19 +94,17 @@ Now each segment has two parts:
 | 4       | 50          | 0.5   |
 
 **Formula**:
+> **root_distance** = `800`
 
 > **accumulateRatio** = `0.5` + `1.0` + `2.0` + `0.5` = `3.6`
 
 > **accumulateBaseDistance** = `100` + `150` + `200` + `50` = `500`
 
-> **remainingDistance** = `800 (root_distance)` - `500 (accumulateBaseDistance)` = `300`
+> **remainingDistance** = `root_distance` - `accumulateBaseDistance` = `300`
 
 > **shareDeltaₙ** = `remainingDistance` / `accumulateRatio` * `segmentRatioₙ`
 
 > **SegmentDistanceₙ** = `baseDistanceₙ` + `shareDeltaₙ`
-
-
-![Discadelta: segment with base and share ratio](images/DiscadeltaDocImage03.jpg)
 
 **Results**:
 
@@ -119,3 +116,5 @@ Now each segment has two parts:
 | 4       | 50  + 37.5 = 87.5  |
 
 > **Total**: `137.5` + `225` + `350` + `87.5` = `800` 
+
+ ![Discadelta: segment with base and share ratio](images/DiscadeltaDocImage03.jpg)
