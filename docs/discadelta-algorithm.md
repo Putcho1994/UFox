@@ -40,7 +40,7 @@ Calculate the distance of an individual segment given the root distance.
 
 ![Discadelta: Simple equal partitioning (800px root → 4 segments of 200px each)](images/DiscadeltaDocImage01.jpg)
 
-Logically, each segment should get **200**. However, it becomes complex if each segment has its own **demand** determining its proportional share.
+Logically, each segment should get **200**. However, it becomes complex if each segment has its own **configuration** determining its proportional share.
 
 ### Proportional Demand Scenario (Share Ratios Configuration)
 
