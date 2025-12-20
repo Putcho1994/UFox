@@ -42,7 +42,7 @@ Calculate the distance of an individual segment given the root distance.
 
 Logically, each segment should get **200**. However, it becomes complex if each segment has its own **configuration** determining its proportional share.
 
-### Proportional Demand Scenario (Share Ratios Configuration)
+### Dynamic Segment Scenario (Share Ratios Configuration)
 
 **Configuration**:
 
