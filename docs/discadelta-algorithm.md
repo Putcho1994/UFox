@@ -20,7 +20,7 @@ It powers fit rect layout in UFox’s GUI/Editor system, but is also designed to
 ### Goal
 Calculate the distance of an individual segment given the root distance.
 
-### Fair Share Scenario (No Demands)
+### Fair Share Scenario (No Segment Configuration)
 
 **Formula**:
 > **rootDistance** = `800`
@@ -42,9 +42,9 @@ Calculate the distance of an individual segment given the root distance.
 
 Logically, each segment should get **200**. However, it becomes complex if each segment has its own **demand** determining its proportional share.
 
-### Proportional Demand Scenario (Ratios Only)
+### Proportional Demand Scenario (Share Ratios Configuration)
 
-**Ratios**:
+**Configuration**:
 
 | Segment | Ratio     |
 |---------|-----------|
@@ -78,13 +78,13 @@ This demonstrates pure proportional sharing — small ratios get tiny shares, la
 In the next scenario, the segment uses a default distance.  
 At a segment ratio of 0.0, the segment's distance falls back to this default.
 
-### Base(default) + Share Ratio Demand Scenario
+### Base(default) and Share Ratio Configuration Scenario
 
 Now each segment has two parts:
 - **Base distance** — the default size that must be satisfied first.
 - **Share ratio factor** — share of any **leftover** space after bases.
 
-**Scenario**:
+**Configuration**:
 
 | Segment | Base Demand | Ratio |
 |---------|-------------|-------|
@@ -126,7 +126,7 @@ to address this.
 
 ### Solving Lose Precision or Overflow Scenario
 
-**Scenario**:
+**Configuration**:
 
 | Segment | Base Demand | Ratio |
 |---------|-------------|-------|
