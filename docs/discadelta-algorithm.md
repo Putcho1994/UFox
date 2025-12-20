@@ -128,12 +128,12 @@ to address this.
 
 **Configuration**:
 
-| Segment | Base Demand | Ratio |
-|---------|-------------|-------|
-| 1       | 100         | 0.3   |
-| 2       | 150         | 1.0   |
-| 3       | 70          | 1.0   |
-| 4       | 50          | 0.8   |
+| Segment | Base   | Ratio |
+|---------|--------|-------|
+| 1       | 100    | 0.3   |
+| 2       | 150    | 1.0   |
+| 3       | 70     | 1.0   |
+| 4       | 50     | 0.8   |
 
 **Results** (using the previous method):
 
@@ -146,7 +146,7 @@ to address this.
 
 > **Total**: `129.032258` + `246.774194` + `296.774194` + `127.419355` = `800.000001` 
  
-As you can see, the current configuration has `.000001` overflow.
+The current configuration with previous method produces `.000001` overflow.
 Below is a strategy to solve this Scenario by cascading remain distance reduction.
 
 > **shareDeltaₙ** = `remainingDistance` / `accumulateRatio` * `segmentRatioₙ`
@@ -166,4 +166,71 @@ Below is a strategy to solve this Scenario by cascading remain distance reductio
 | 3       | 200 + 174.193549 /   1.8    *   1.0 | 96.774193  | 296.774193 |
 | 4       | 50  + 77.419356  /   0.8    *   0.8 | 77.419356  | 127.419356 |
 
-> **Total**: `129.032258` + `246.774193` + `296.774193` + `127.419356` = `800` 
+> **Total**: `129.032258` + `246.774193` + `296.774193` + `127.419356` = `800`
+
+The next scenario will introduce **Dynamic Base Segment** in case `accumulateBaseDistance` is greater than rootDistance.
+
+### Dynamic Base Segment Scenario (Underflow Handling)
+When `accumulateBaseDistance` exceeds `rootDistance`, the algorithm **uses a dynamic base** to proportionally scale down allocations to fit within `rootDistance`.  
+This leverages the `reduceRatio` configuration to maintain proportional sharing among segments.
+
+**Key Behaviors in This Scenario:**
+- Clamp `remainingDistance` to `0`.
+- `shareDeltaₙ` calculation can be ignored and returns `0`.
+- Normalize `segmentBaseₙ` (`baseShareRatioₙ`).
+- Cascading strategy to Solving Lose Precision or Overflow
+
+**Configuration**:
+
+| Segment | Base | reduceRatio | shareRatio |
+|---------|------|-------------|------------|
+| 1       | 200  | 0.7         | 0.1        |
+| 2       | 300  | 1.0         | 1.0        |
+| 3       | 150  | 1.0         | 2.0        |
+| 4       | 250  | 0.3         | 0.5        |
+
+**Formula**:
+
+**Prepare Compute Context**
+
+> **rootDistance** = `800`
+
+> **remainBaseDistance** = `rootDistance`
+
+> **reduceDistanceₙ** = `segmentBaseₙ` * (`1` - `reduceRatioₙ`)
+
+> **baseShareDistanceₙ** = `segmentBaseₙ` * `reduceRatioₙ`
+
+> **baseShareRatioₙ** = `baseShareDistanceₙ` / `100`
+
+> **accumulateReduceDistance** = `accumulateReduceDistance` + `reduceDistanceₙ`
+
+> **accumulateBaseShareRatio** = `accumulateBaseShareRatio` + `baseShareRatioₙ`
+
+**Compute Base Distance**
+
+> **remainReduceDistance** = `remainBaseDistance` - `accumulateReduceDistance`
+
+> **baseDistanceₙ** = `remainReduceDistance` / `accumulateBaseShareRatio` * `baseShareRatioₙ` + `reduceDistanceₙ`
+
+**Cascading strategy**
+
+> **accumulateReduceDistance** = `accumulateReduceDistance` - `reduceDistanceₙ`
+
+> **remainBaseDistance** = `remainBaseDistance` - `baseDistanceₙ`
+
+> **accumulateBaseShareRatio** = `accumulateBaseShareRatio` - `baseShareRatioₙ`
+
+> **SegmentDistanceₙ** = `baseDistanceₙ` + `(0) shareDeltaₙ`
+
+**Results** (using cascading strategy):
+
+| Segment | reduceDistance | baseShareDistance | baseShareRatio | remainReduceDistance / accumulateBaseShareRatio * baseShareRatioₙ | baseDistanceₙ   | SegmentDistanceₙ  |
+|---------|----------------|-------------------|----------------|-------------------------------------------------------------------|-----------------|-------------------|
+| 1       | 60             | 140               | 1.4            | 565 / 6.65 * 1.4 ≈ 118.947368                                     | 178.947368      | 178.947368        |
+| 2       | 0              | 300               | 3.0            | 446.052632 / 5.25 * 3.0 ≈ 254.887218                              | 254.887218      | 254.887218        |
+| 3       | 0              | 150               | 1.5            | 191.165414 / 2.25 * 1.5 ≈ 127.443609                              | 127.443609      | 127.443609        |
+| 4       | 175            | 75                | 0.75           | 63.721805 / 0.75 * 0.75 = 63.721805                               | 238.721805      | 238.721805        |
+
+> **Total**: `178.947368` + `254.887218` + `127.443609` + `238.721805` = `800`
+

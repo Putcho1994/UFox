@@ -187,9 +187,9 @@ export namespace ufox::geometry {
         int& accumulateOffset = filler.accumulateOffset;
         int& baseLength = *filler.lengths[currentStep];
         const int endLength = remainLength - accumulateOffset;
-        const int flexLength = remainLength <= 0? 0 :mathf::MulToInt(mathf::Divide(endLength, remainStepRatio), stepRatio);
+        const int flexLength = remainLength <= 0? 0 :mathf::MulToInt(mathf::Divide(endLength, remainStepRatio), stepRatio)+ offset;
 
-        baseLength = std::max(flexLength + offset, min);
+        baseLength = std::max(flexLength , min);
 
         accumulateOffset -= offset;
         remainLength -= baseLength;
