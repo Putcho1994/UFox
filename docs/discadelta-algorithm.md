@@ -7,7 +7,7 @@ It powers fit rect layout in UFox’s GUI/Editor system, but is also designed to
 
 ### Core Components
 - **Distance**: One-dimensional positive value.
-- **Cascade**: Additive cascading offset for the next segment begin distance.
+- **Cascade**: Additive cascading offset for the next segment start distance.
 - **Delta**: Filling/sharing leftover distance to each segment.
 
 ## Use Cases
@@ -118,3 +118,52 @@ Now each segment has two parts:
 > **Total**: `137.5` + `225` + `350` + `87.5` = `800` 
 
  ![Discadelta: segment with base and share ratio](images/DiscadeltaDocImage03.jpg)
+
+In this sample, the current configuration achieves a perfect sum of the total distance (800).
+
+However, some configurations may lose precision or have overflow. The next scenario introduces a strategy
+to address this. 
+
+### Solving Lose Precision or Overflow Scenario
+
+**Scenario**:
+
+| Segment | Base Demand | Ratio |
+|---------|-------------|-------|
+| 1       | 100         | 0.3   |
+| 2       | 150         | 1.0   |
+| 3       | 70          | 1.0   |
+| 4       | 50          | 0.8   |
+
+**Results** (using the previous method):
+
+| Segment | Base + rDistance / aRatio * Ratio   | Distance   |
+|---------|-------------------------------------|------------|
+| 1       | 100  +   300     /   3.1    *   0.3 | 129.032258 |
+| 2       | 150  +   300     /   3.1    *   1.0 | 246.774194 |
+| 3       | 200  +   300     /   3.1    *   1.0 | 296.774194 |
+| 4       | 50   +   300     /   3.1    *   0.8 | 127.419355 |
+
+> **Total**: `129.032258` + `246.774194` + `296.774194` + `127.419355` = `800.000001` 
+ 
+As you can see, the current configuration has `.000001` overflow.
+Below is a strategy to solve this Scenario by cascading remain distance reduction.
+
+> **shareDeltaₙ** = `remainingDistance` / `accumulateRatio` * `segmentRatioₙ`
+ 
+> **remainingDistance** = `remainingDistance` - `shareDeltaₙ`
+ 
+> **accumulateRatio** = `accumulateRatio` - `segmentRatioₙ`
+
+> **SegmentDistanceₙ** = `baseDistanceₙ` + `shareDeltaₙ`
+
+**Results**:
+
+| Segment | Base + rDistance / aRatio * Ratio   | shareDelta | Distance   |
+|---------|-------------------------------------|------------|------------|
+| 1       | 100 + 300        /   3.1    *   0.3 | 29.032258  | 129.032258 |
+| 2       | 150 + 270.967742 /   2.8    *   1.0 | 96.774193  | 246.774193 |
+| 3       | 200 + 174.193549 /   1.8    *   1.0 | 96.774193  | 296.774193 |
+| 4       | 50  + 77.419356  /   0.8    *   0.8 | 42.580646  | 127.419356 |
+
+> **Total**: `129.032258` + `246.774193` + `296.774193` + `127.419356` = `800` 
