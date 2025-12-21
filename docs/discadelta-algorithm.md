@@ -177,6 +177,7 @@ This leverages the `reduceRatio` configuration to maintain proportional sharing 
 **Key Behaviors in This Scenario:**
 - Clamp `remainingDistance` to `0`.
 - `shareDeltaₙ` calculation can be ignored and returns `0`.
+- `reduceDistance` 
 - Normalize `segmentBaseₙ` (`baseShareRatioₙ`).
 - Cascading strategy to Solving Lose Precision or Overflow
 
