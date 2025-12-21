@@ -7,7 +7,7 @@ It powers fit rect layout in UFox’s GUI/Editor system, but is also designed to
 
 ### Core Components
 - **Distance**: One-dimensional positive value.
-- **Cascade**: Additive cascading offset for the next segment start distance.
+- **Cascade**: Cascading remains distance for the next calculation.
 - **Delta**: Filling/sharing leftover distance to each segment.
 
 ## Use Cases
@@ -411,3 +411,12 @@ int main()
 }
 ```
 
+## Chapter Summary
+
+Discadelta provides a reliable, configuration-driven way to partition a 1D space into resizable segments.  
+It handles fair share, proportional ratios, base + ratio mixed cases, precision/overflow fixes, and underflow scaling — all while ensuring the total distance exactly matches the root.
+
+This chapter completes the **static partitioning** foundation.  
+The next chapter explores **min/max constraints** to clamp individual segments while preserving the overall layout integrity.
+
+### Next Chapter: [Discadelta Algorithm Constraints](discadelta-algorithm-constraints.md)
