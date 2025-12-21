@@ -174,12 +174,13 @@ The next scenario will introduce **Dynamic Base Segment** in case `accumulateBas
 When `accumulateBaseDistance` exceeds `rootDistance`, the algorithm **uses a dynamic base** to proportionally scale down allocations to fit within `rootDistance`.  
 This leverages the `reduceRatio` configuration to maintain proportional sharing among segments.
 
-**Key Behaviors in This Scenario:**
+#### Key Behaviors in This Scenario:
 - Clamp `remainingDistance` to `0`.
-- `shareDeltaₙ` calculation can be ignored and returns `0`.
-- `reduceDistance` 
-- Normalize `segmentBaseₙ` (`baseShareRatioₙ`).
-- Cascading strategy to Solving Lose Precision or Overflow
+- Ignore `shareDeltaₙ` calculation (returns `0`).
+- `reduceDistance` is a solidified base distance that resists scaling.
+- Normalize `segmentBaseₙ` (`baseShareRatioₙ`) for scaling.
+- Cascading strategy to solve loss of precision or overflow.
+
 
 **Configuration**:
 
