@@ -6,9 +6,9 @@ Discadelta is a 1D partitioning algorithm for dividing a line (width, height, ed
 It powers fit rect layout in UFox’s GUI/Editor system, but is also designed to be used anywhere in the engine that needs reliable, interactive linear splitting.
 
 ### Core Components
-- **Distance**: One-dimensional positive value.
-- **Cascade**: Cascading remains distance for the next calculation.
-- **Delta**: Filling/sharing leftover distance to each segment.
+- **Distance**: The total available linear space (root distance).
+- **Cascade**: A method where the remainder of a calculation is passed to the next step to prevent rounding errors.
+- **Delta**: The specific amount added to or subtracted from a segment to reach the target size.
 
 ## Use Cases
 - **Tools/Editor**
@@ -326,7 +326,7 @@ int main()
         if (rootBase <= accumulateBaseDistance) {
             const float remainReduceDistance = remainShareDistance - accumulateReduceDistance;
             const float& shareRatio = baseShareRatios[i];
-            const float baseDistance = (remainReduceDistance <= 0.0f || accumulateBaseShareRatio <= 0.0f || shareRatio <= 0.0f ? 0.0f :
+            const float baseDistance = (remainReduceDistance <= 0.0f || accumulateBaseShareRatio <= 0.0f || shareRatio <= 0.0f ? 0.0f + reduceDistances[i] :
                 remainReduceDistance / accumulateBaseShareRatio * shareRatio) + reduceDistances[i];
 
             accumulateReduceDistance -= reduceDistances[i];
@@ -356,7 +356,7 @@ int main()
 
         for (size_t i = 0; i < segmentCount; ++i) {
             const float& shareRatio = shareRatios[i];
-            const float shareDelta = remainShareDistance <= 0.0f || remainShareRatio <= 0.0f || shareRatio <= 0.0f? 0.0f : remainShareDistance / remainShareRatio * shareRatio;
+            const float shareDelta = remainShareRatio <= 0.0f || shareRatio <= 0.0f? 0.0f : remainShareDistance / remainShareRatio * shareRatio;
 
             segmentDistances[i].delta = shareDelta;
             segmentDistances[i].value += shareDelta;

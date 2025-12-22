@@ -103,34 +103,36 @@ export namespace ufox {
             viewpanel6->setBackgroundColor(vk::ClearColorValue{1.0f, 1.0f, 0.0f, 1.0f});
             viewpanel7.emplace();
             viewpanel7->name = "child [2]-[1]-[1]";
-            viewpanel7->resizerValue = 0.5f;
-            viewpanel7->flexShrink = 0.0f;
-            viewpanel7->flexGlow = 0.5f;
-            viewpanel7->width = geometry::Length::Pixels(100);
+            viewpanel7->resizerValue = 0.3f;
+            viewpanel7->flexShrink = 0.7f;
+            viewpanel7->flexGlow = 0.7f;
+            viewpanel7->width = geometry::Length::Pixels(200);
             //viewpanel7->minWidth = geometry::Length::Pixels(100);
+            viewpanel7->maxWidth = geometry::Length::Pixels(100);
             viewpanel7->setBackgroundColor(vk::ClearColorValue{1.0f, 0.0f, 1.0f, 1.0f});
             viewpanel8.emplace();
             viewpanel8->name = "child [2]-[1]-[2]";
             viewpanel8->flexGlow = 1.0f;
-            viewpanel8->flexShrink = 0.0f;
-            viewpanel8->width = geometry::Length::Pixels(150);
+            viewpanel8->flexShrink = 1.0f;
+            viewpanel8->width = geometry::Length::Pixels(200);
+            viewpanel8->minWidth = geometry::Length::Pixels(300);
             viewpanel8->resizerValue = 0.6f;
             viewpanel8->setBackgroundColor(vk::ClearColorValue{0.5f, 0.5f, 0.5f, 1.0f});
             viewpanel9.emplace();
             viewpanel9->name = "child [2]-[1]-[3]";
             viewpanel9->flexGlow = 2.0f;
             viewpanel9->flexShrink = 0.0f;
-            viewpanel9->width = geometry::Length::Pixels(200);
+            viewpanel9->width = geometry::Length::Pixels(150);
             viewpanel9->resizerValue = 0.5f;
-            //viewpanel9->minWidth = geometry::Length::Pixels(20);
+            viewpanel9->maxWidth = geometry::Length::Pixels(200);
             viewpanel9->setBackgroundColor(vk::ClearColorValue{0.5f, 0.7f, 0.5f, 1.0f});
             viewpanel10.emplace();
             viewpanel10->name = "child [4]";
             viewpanel10->resizerValue = 0.1f;
             viewpanel10->flexGlow = 0.5f;
-            viewpanel10->flexShrink = 0.0f;
-            viewpanel10->width = geometry::Length::Pixels(50);
-            //viewpanel10->minWidth = geometry::Length::Pixels(200);
+            viewpanel10->flexShrink = 0.3f;
+            viewpanel10->width = geometry::Length::Pixels(350);
+            viewpanel10->maxWidth = geometry::Length::Pixels(300);
             viewpanel10->setBackgroundColor(vk::ClearColorValue{0.5f, 0.5f, 0.7f, 1.0f});
 
 
@@ -415,26 +417,6 @@ export namespace ufox {
             render::RenderArea(cmb, *windowResource, viewpanel8->rect, c8);
             render::RenderArea(cmb, *windowResource, viewpanel9->rect, c9);
             render::RenderArea(cmb, *windowResource, viewpanel10->rect, c10);
-            auto w7 = static_cast<uint32_t>(viewpanel7->layout.baseWidth);
-            auto h7 = static_cast<uint32_t>(viewpanel7->rect.extent.height);
-            auto r7 = vk::Rect2D{viewpanel7->rect.offset, vk::Extent2D{w7, h7}};
-            render::RenderArea(cmb, *windowResource, r7,{ 0.8f, 0.0f, 0.8f, 1.0f});
-            auto w8 = static_cast<uint32_t>(viewpanel8->layout.baseWidth);
-            auto h8 = static_cast<uint32_t>(viewpanel8->rect.extent.height);
-            auto r8 = vk::Rect2D{viewpanel8->rect.offset, vk::Extent2D{w8, h8}};
-            render::RenderArea(cmb, *windowResource, r8, {0.3f, 0.3f, 0.3f, 1.0f});
-            auto w9 = static_cast<uint32_t>(viewpanel9->layout.baseWidth);
-            auto h9 = static_cast<uint32_t>(viewpanel9->rect.extent.height);
-            auto r9 = vk::Rect2D{viewpanel9->rect.offset, vk::Extent2D{w9, h9}};
-            render::RenderArea(cmb, *windowResource, r9, {0.3f, 0.5f, 0.3f, 1.0f});
-            auto w10 = static_cast<uint32_t>(viewpanel10->layout.baseWidth);
-            auto h10 = static_cast<uint32_t>(viewpanel10->rect.extent.height);
-            auto r10 = vk::Rect2D{viewpanel10->rect.offset, vk::Extent2D{w10, h10}};
-            render::RenderArea(cmb, *windowResource, r10, {0.3f, 0.3f, 0.5f, 1.0f});
-            auto w6 = w7 + w8 + w9 + w10;
-            auto h6 = static_cast<uint32_t>(viewpanel6->rect.extent.height);
-            auto r6 = vk::Rect2D{viewpanel6->rect.offset, vk::Extent2D{w6, h6}};
-            render::RenderArea(cmb, *windowResource, r6, {0.8f, 0.8f, 0.0f, 1.0f});
 
 
             gpu::vulkan::TransitionImageLayout(cmb, windowResource->swapchainResource->getCurrentImage(),

@@ -187,7 +187,7 @@ export namespace ufox::geometry {
         int& accumulateOffset = filler.accumulateOffset;
         int& baseLength = *filler.lengths[currentStep];
         const int endLength = remainLength - accumulateOffset;
-        const int flexLength = (remainLength <= 0? 0 :mathf::MulToInt(mathf::Divide(endLength, remainStepRatio), stepRatio)) + reduceDistance;
+        const int flexLength = (remainLength <= 0? 0 + reduceDistance :mathf::MulToInt(mathf::Divide(endLength, remainStepRatio), stepRatio)) + reduceDistance;
 
         baseLength = std::max(flexLength , min);
 
@@ -344,6 +344,8 @@ export namespace ufox::geometry {
             const int flexDelta = flexCtx.glowLengths[i];
 
             const int targetLength = std::max(0,baseLength + flexDelta );
+
+            debug::log(debug::LogLevel::eInfo, "d{} {}", child->name, targetLength);
 
             const int targetWidthLength = isRow? targetLength: width;
             const int targetHeightLength = isRow? height: targetLength;

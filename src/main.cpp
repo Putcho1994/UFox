@@ -39,92 +39,104 @@ struct DiscadeltaSegmentConfig {
     float base;
     float reduceRatio;
     float shareRatio;
+    float min;
+    float max;
 };
+
+struct DiscadeltaSegmentMetrics {
+    float baseDistance;
+    float reduceDistance;
+    float baseShareRatio;
+    float shareRatio;
+    float min;
+    float max;
+};
+
+struct DiscadeltaSegmentAccumulator {
+    float reduceDistance{0.0f};
+    float baseShareRatio{0.0f};
+    float baseDistance{0.0f};
+    float shareRatio{0.0f};
+};
+
+
+constexpr auto PrepareDiscadeltaComputeContext = [](const std::vector<DiscadeltaSegmentConfig>& configs) {
+    std::vector<DiscadeltaSegmentMetrics> metrics;
+    metrics.reserve(configs.size());
+    DiscadeltaSegmentAccumulator accumulators;
+
+    for (const auto &[base, reduceRatio, shareRatio, min, max] : configs) {
+        const float validatedMin = std::max(0.0f, min);  // never negative
+        const float validatedMax = std::max(validatedMin, max);  // max >= min
+        const float validatedBase = std::clamp(base ,validatedMin, validatedMax);  // base >= min && base <= max
+        const float reduceDist = validatedBase * (1.0f - reduceRatio);
+        const float baseShareDist = validatedBase * reduceRatio;
+        const float baseShareRat = baseShareDist <= 0.0f? 0.0f: baseShareDist / 100.0f;
+
+        accumulators.reduceDistance += reduceDist;
+        accumulators.baseShareRatio += baseShareRat;
+        accumulators.baseDistance += validatedBase;
+        accumulators.shareRatio += shareRatio;
+
+        metrics.push_back({validatedBase, reduceDist, baseShareRat, shareRatio, validatedMin, validatedMax});
+    }
+    return std::make_pair(metrics, accumulators);
+};
+
 
 int main()
 {
     std::vector<DiscadeltaSegmentConfig> segmentConfigs{
-        {200.0f, 0.7f, 0.1f},
-        {300.0f, 1.0f, 1.0f},
-        {150.0f, 0.0f, 2.0f},
-        {250.0f, 0.3f, 0.5f}
+        {200.0f, 0.7f, 0.1f ,0.0f, 100.0f},
+        {200.0f, 1.0f, 1.0f ,300.0f, std::numeric_limits<float>::max()},
+        {150.0f, 0.0f, 2.0f, 0.0f, 200.0f},
+        {350.0f, 0.3f, 0.5f, 50.0f, 300.0f}
     };
 
+    constexpr float rootBase = 800.0f;
     const size_t segmentCount = segmentConfigs.size();
+    const auto [segmentMetrics, accumulators] = PrepareDiscadeltaComputeContext(segmentConfigs);
 
     std::vector<DiscadeltaSegment> segmentDistances{};
     segmentDistances.reserve(segmentCount);
 
 #pragma region // Prepare Compute Context
-    constexpr float rootBase = 800.0f;
 
-    std::vector<float> reduceDistances{};
-    reduceDistances.reserve(segmentCount);
+    float remainShareDistance = rootBase;
+    float remainingReduceDistance = accumulators.reduceDistance;
+    float remainingBaseShareRatio = accumulators.baseShareRatio;
 
-    std::vector<float> baseShareDistances{};
-    baseShareDistances.reserve(segmentCount);
-
-    std::vector<float> baseShareRatios{};
-    baseShareRatios.reserve(segmentCount);
-
-    std::vector<float> shareRatios{};
-    shareRatios.reserve(segmentCount);
-
-    float accumulateReduceDistance{0.0f};
-    float accumulateBaseShareRatio{0.0f};
-
-    float accumulateBaseDistance{0.0f};
-    float accumulateShareRatio{0.0f};
-
-    for (size_t i = 0; i < segmentCount; ++i) {
-        const auto &[base, reduceRatio, shareRatio] = segmentConfigs[i];
-
-        const float reduceDistance = base * (1.0f - reduceRatio);
-        const float baseShareDistance = base * reduceRatio;
-        const float baseShareRatio = baseShareDistance / 100.0f;
-
-        accumulateReduceDistance += reduceDistance;
-        accumulateBaseShareRatio += baseShareRatio;
-
-        accumulateBaseDistance += base;
-        accumulateShareRatio += shareRatio;
-
-        reduceDistances.push_back(reduceDistance);
-        baseShareDistances.push_back(baseShareDistance);
-        baseShareRatios.push_back(baseShareRatio);
-
-        shareRatios.push_back(shareRatio);
-    }
+    float remainExtraShareDelta = rootBase;
 #pragma endregion //Prepare Compute Context
 
 #pragma region //Compute Segment Base Distance
-
-    float remainShareDistance = rootBase;
-    float total{0.0f};
-
     for (size_t i = 0; i < segmentCount; ++i) {
-        DiscadeltaSegment segment{};
+        float baseValue = 0.0f;
+        float fullBase = 0.0f;
 
-        if (rootBase <= accumulateBaseDistance) {
-            const float remainReduceDistance = remainShareDistance - accumulateReduceDistance;
-            const float& shareRatio = baseShareRatios[i];
-            const float baseDistance = (remainReduceDistance <= 0.0f || accumulateBaseShareRatio <= 0.0f || shareRatio <= 0.0f ? 0.0f :
-                remainReduceDistance / accumulateBaseShareRatio * shareRatio) + reduceDistances[i];
+        if (rootBase <= accumulators.baseDistance) {
+            const float remainReduceDistance = remainShareDistance - remainingReduceDistance
+;
+            const float& currentShareRatio = segmentMetrics[i].baseShareRatio;
+            const float distributedShare = remainReduceDistance <= 0.0f || remainingBaseShareRatio <= 0.0f || currentShareRatio <= 0.0f ? 0.0f :
+            remainReduceDistance / remainingBaseShareRatio * currentShareRatio;
+            fullBase = distributedShare + segmentMetrics[i].reduceDistance;
+            baseValue = std::max (fullBase, segmentConfigs[i].min);
 
-            accumulateReduceDistance -= reduceDistances[i];
-            remainShareDistance -= baseDistance;
-            accumulateBaseShareRatio -= shareRatio;
-
-            segment.base = baseDistance;
-            segment.value = baseDistance;
-            total += baseDistance;
+            remainingReduceDistance -= segmentMetrics[i].reduceDistance;
+            remainingBaseShareRatio -= currentShareRatio;
         }
         else {
-            const float baseDistance = segmentConfigs[i].base;
-            segment.base = baseDistance;
-            segment.value = baseDistance;
-            remainShareDistance -= baseDistance;
+            baseValue = segmentConfigs[i].base;
+            fullBase = segmentConfigs[i].base;
         }
+
+        remainShareDistance -= baseValue;
+        remainExtraShareDelta -= fullBase;
+
+        DiscadeltaSegment segment{};
+        segment.base = baseValue;
+        segment.value = baseValue;
 
         segmentDistances.push_back(segment);
     }
@@ -134,60 +146,78 @@ int main()
 #pragma region //Compute Segment Delta
 
     if (remainShareDistance > 0.0f) {
-        float remainShareRatio = accumulateShareRatio;
+        float remainShareRatio = accumulators.shareRatio;
 
         for (size_t i = 0; i < segmentCount; ++i) {
-            const float& shareRatio = shareRatios[i];
-            const float shareDelta = remainShareDistance <= 0.0f || remainShareRatio <= 0.0f || shareRatio <= 0.0f? 0.0f : remainShareDistance / remainShareRatio * shareRatio;
+            const float& ratio = segmentMetrics[i].shareRatio;
+            const float shareDelta = remainShareRatio <= 0.0f || ratio <= 0.0f? 0.0f : remainShareDistance / remainShareRatio * ratio;
 
             segmentDistances[i].delta = shareDelta;
             segmentDistances[i].value += shareDelta;
 
             remainShareDistance -= shareDelta;
-            remainShareRatio -= shareRatio;
+            remainShareRatio -= ratio;
         }
     }
 
 #pragma endregion //Compute Segment Delta
 
 #pragma region //Print Result
-    std::cout << "\n=== Dynamic Base Segment (Underflow Handling) ===\n";
-    std::cout << std::format("Root distance: {:.1f}\n\n", rootBase);
+    std::cout << "\n=== Discadelta Layout: Metrics & Final Distribution ===\n";
+    std::cout << std::format("Root distance: {:.1f} px\n\n", rootBase);
 
-    // Table header
+    // Header for metrics + results
     std::cout << std::left
-              << std::setw(8) << "Segment"
-              << std::setw(14) << "reduceDist"
-              << std::setw(16) << "baseShareDist"
-              << std::setw(16) << "baseShareRatio"
-              << std::setw(14) << "base"
-              << std::setw(14) << "delta"
-              << std::setw(14) << "distance"
+              << std::setw(8)  << "Seg"
+              << std::setw(12) << "Config Base"
+              << std::setw(10) << "Validated"
+              << std::setw(10) << "Min"
+              << std::setw(10) << "Max"
+              << std::setw(14) << "ReduceDist"
+              << std::setw(16) << "BaseShareDist"
+              << std::setw(16) << "BaseShareRatio"
+              << std::setw(12) << "Final Base"
+              << std::setw(12) << "Delta"
+              << std::setw(14) << "Final Value"
               << '\n';
 
-    std::cout << std::string(100, '-') << '\n';
+    std::cout << std::string(140, '-') << '\n';
+
+    float total = 0.0f;
 
     for (size_t i = 0; i < segmentCount; ++i) {
-        const auto& seg = segmentConfigs[i];
+        const auto& cfg = segmentConfigs[i];
+        const auto& met = segmentMetrics[i];    // from PrepareDiscadeltaComputeContext
         const auto& res = segmentDistances[i];
 
-        const float reduceDistance = seg.base * (1.0f - seg.reduceRatio);
-        const float baseShareDistance = seg.base * seg.reduceRatio;
-        const float baseShareRatio = baseShareDistance / 100.0f;
+        const float reduceDist     = met.reduceDistance;
+        const float baseShareDist  = met.baseDistance;  // renamed for clarity
+        const float baseShareRatio = met.baseShareRatio;
+
+        total += res.value;
 
         std::cout << std::fixed << std::setprecision(3)
-                  << std::setw(8) << (i + 1)
-                  << std::setw(14) << reduceDistance
-                  << std::setw(16) << baseShareDistance
+                  << std::setw(8)  << (i + 1)
+                  << std::setw(12) << cfg.base
+                  << std::setw(10) << met.baseDistance           // validated base
+                  << std::setw(10) << met.min
+                  << std::setw(10) << met.max
+                  << std::setw(14) << reduceDist
+                  << std::setw(16) << baseShareDist
                   << std::setw(16) << baseShareRatio
-                  << std::setw(14) << res.base
-                  << std::setw(14) << res.delta
+                  << std::setw(12) << res.base
+                  << std::setw(12) << res.delta
                   << std::setw(14) << res.value
                   << '\n';
     }
 
-    std::cout << std::string(100, '-') << '\n';
-    std::cout << std::format("Total: {:.3f} (expected 800.0)\n\n", total);
+    std::cout << std::string(140, '-') << '\n';
+    std::cout << std::format("Total: {:.3f} px (expected {:.1f})\n", total, rootBase);
+    std::cout << std::format("Accumulators: Base={:.1f}, ReduceDist={:.1f}, BaseShareRatio={:.4f}, ShareRatio={:.1f}\n\n",
+                             accumulators.baseDistance,
+                             accumulators.reduceDistance,
+                             accumulators.baseShareRatio,
+                             accumulators.shareRatio);
 #pragma endregion //Print Result
 
     return 0;
