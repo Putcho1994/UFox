@@ -234,15 +234,15 @@
 #include <iomanip>
 
 struct DiscadeltaSegment {
-    float base;
-    float delta;
-    float value;
+    float compressBase;
+    float expandDelta;
+    float distance;
 };
 
 struct DiscadeltaSegmentConfig {
     float base;
     float compressRatio;
-    float shareRatio;
+    float expandRatio;
 };
 
 int main()
@@ -255,65 +255,60 @@ int main()
     };
 
     // std::vector<DiscadeltaSegmentConfig> segmentConfigs{
-    //         {100.0f, 1.0f, 1.0f},
-    //         {100.0f, 1.0f, 1.0f},
-    //         {150.0f, 1.0f, 2.0f},
-    //         {150.0f, 1.0f, 1.5f}
+    //         {100.0f, 1.0f, 0.3f},
+    //         {150.0f, 1.0f, 1.0f},
+    //         {70.0f, 1.0f, 1.0f},
+    //         {50.0f, 1.0f, 0.8f}
     // };
 
     const size_t segmentCount = segmentConfigs.size();
 
-    std::vector<DiscadeltaSegment> segmentDistances{};
-    segmentDistances.reserve(segmentCount);
+    std::vector<DiscadeltaSegment> segmentDistances(segmentCount);
+
 
 #pragma region // Prepare Compute Context
     constexpr float rootBase = 800.0f;
 
-    std::vector<float> compressBaseDistances{};
-    compressBaseDistances.reserve(segmentCount);
+    std::vector<float> compressCapacities{};
+    compressCapacities.reserve(segmentCount);
 
-    std::vector<float> solidifyBaseDistances{};
-    solidifyBaseDistances.reserve(segmentCount);
+    std::vector<float> compressSolidifies{};
+    compressSolidifies.reserve(segmentCount);
 
     std::vector<float> baseDistances{};
     baseDistances.reserve(segmentCount);
 
-    std::vector<float> shareRatios{};
-    shareRatios.reserve(segmentCount);
+    std::vector<float> expandRatios{};
+    expandRatios.reserve(segmentCount);
 
     float accumulateBaseDistance{0.0f};
-    float accumulateSolidifyBaseDistance{0.0f};
-    float accumulateShareRatio{0.0f};
+    float accumulateCompressSolidify{0.0f};
+    float accumulateExpandRatio{0.0f};
 
     for (size_t i = 0; i < segmentCount; ++i) {
-        const auto &[base, compressRatio, shareRatio] = segmentConfigs[i];
+        const auto &[base, compressRatio, expandRatio] = segmentConfigs[i];
 
         //Calculate base proportion metrics
-        const float compressBaseDistance = base * compressRatio;
-        const float solidifyBaseDistance = base - compressBaseDistance;
+        const float compressCapacity = base * compressRatio;
+        const float compressSolidify = base - compressCapacity;
         const float validatedBaseDistance = std::max(base, 0.0f); // no negative
 
-        compressBaseDistances.push_back(compressBaseDistance);
-        solidifyBaseDistances.push_back(solidifyBaseDistance);
+        compressCapacities.push_back(compressCapacity);
+        compressSolidifies.push_back(compressSolidify);
         baseDistances.push_back(validatedBaseDistance);
 
         //Accumulate share proportion capacity metrics:
         accumulateBaseDistance += validatedBaseDistance;
-        accumulateSolidifyBaseDistance += solidifyBaseDistance;
+        accumulateCompressSolidify += compressSolidify;
 
-        DiscadeltaSegment segment{};
-        segment.base = validatedBaseDistance;
-        segment.value = validatedBaseDistance;
-        segmentDistances.push_back(segment);
+        DiscadeltaSegment& segment = segmentDistances[i];
+        segment.compressBase = validatedBaseDistance;
+        segment.distance = validatedBaseDistance;
 
-        shareRatios.push_back(shareRatio);
-        accumulateShareRatio += shareRatio;
+        expandRatios.push_back(expandRatio);
+        accumulateExpandRatio += expandRatio;
     }
 
-    //Set Remain Metrics for Cascading
-    float remainShareDistance = rootBase;
-    float remainBaseDistance = accumulateBaseDistance;
-    float remainSolidifyBaseDistance = accumulateSolidifyBaseDistance;
 
 #pragma endregion //Prepare Compute Context
 
@@ -321,39 +316,43 @@ int main()
 
     if (rootBase < accumulateBaseDistance) {
         //compressing
+        float cascadeCompressDistance = rootBase;
+        float cascadeBaseDistance = accumulateBaseDistance;
+        float cascadeCompressSolidify = accumulateCompressSolidify;
+
         for (size_t i = 0; i < segmentCount; ++i) {
-            const float currentShareDistance = remainShareDistance - remainSolidifyBaseDistance;
-            const float currentBaseCapacity = remainBaseDistance - remainSolidifyBaseDistance;
-            const float& currentCompressBase = compressBaseDistances[i];
-            const float& currentSolidifyBase = solidifyBaseDistances[i];
-            const float dynamicBaseDistance = currentShareDistance <= 0 || currentBaseCapacity <= 0 || currentCompressBase <= 0? 0.0f:
-            std::max(0.0f, currentShareDistance / currentBaseCapacity * currentCompressBase + currentSolidifyBase);
+            const float remainCompressDistance = cascadeCompressDistance - cascadeCompressSolidify;
+            const float remainCompressCapacity = cascadeBaseDistance - cascadeCompressSolidify;
+            const float& compressCapacity = compressCapacities[i];
+            const float& compressSolidify = compressSolidifies[i];
+            const float compressBaseDistance = remainCompressDistance <= 0 || remainCompressCapacity <= 0 || compressCapacity <= 0? 0.0f:
+            std::max(0.0f, remainCompressDistance / remainCompressCapacity * compressCapacity + compressSolidify);
 
             DiscadeltaSegment& segment = segmentDistances[i];
-            segment.base = dynamicBaseDistance;
-            segment.value = dynamicBaseDistance;
+            segment.compressBase = compressBaseDistance;
+            segment.distance = compressBaseDistance; //overwrite pre compute
 
-            remainShareDistance -= dynamicBaseDistance;
-            remainSolidifyBaseDistance -= currentSolidifyBase;
-            remainBaseDistance -= baseDistances[i];
+            cascadeCompressDistance -= compressBaseDistance;
+            cascadeCompressSolidify -= compressSolidify;
+            cascadeBaseDistance -= baseDistances[i];
         }
     }
     else {
         //Expanding
-        float currentRemainShareDistance = std::max(remainShareDistance - accumulateBaseDistance, 0.0f);
-        float currentRemainShareRatio = accumulateShareRatio;
+        float cascadeExpandDistance = std::max(rootBase - accumulateBaseDistance, 0.0f);
+        float cascadeExpandRatio = accumulateExpandRatio;
 
-        if (currentRemainShareDistance > 0.0f) {
+        if (cascadeExpandDistance > 0.0f) {
             for (size_t i = 0; i < segmentCount; ++i) {
-                const float& shareRatio = shareRatios[i];
-                const float shareDelta = currentRemainShareRatio <= 0.0f || shareRatio <= 0.0f? 0.0f :
-                currentRemainShareDistance / currentRemainShareRatio * shareRatio;
+                const float& shareRatio = expandRatios[i];
+                const float expandDelta = cascadeExpandRatio <= 0.0f || shareRatio <= 0.0f? 0.0f :
+                cascadeExpandDistance / cascadeExpandRatio * shareRatio;
 
-                segmentDistances[i].delta = shareDelta;
-                segmentDistances[i].value += shareDelta;
+                segmentDistances[i].expandDelta = expandDelta;
+                segmentDistances[i].distance += expandDelta; //add to precompute
 
-                currentRemainShareDistance -= shareDelta;
-                currentRemainShareRatio -= shareRatio;
+                cascadeExpandDistance -= expandDelta;
+                cascadeExpandRatio -= shareRatio;
             }
         }
     }
@@ -371,11 +370,11 @@ int main()
               << std::setw(2) << "|"
               << std::setw(10) << "Segment"
               << std::setw(2) << "|"
-              << std::setw(20) << "Solidify Distance"
+              << std::setw(20) << "Compress Solidify"
+              << std::setw(2) << "|"
+              << std::setw(20) << "Compress Capacity"
               << std::setw(2) << "|"
               << std::setw(20) << "Compress Distance"
-              << std::setw(2) << "|"
-              << std::setw(20) << "Dynamic Distance"
               << std::setw(2) << "|"
               << std::setw(20) << "Expand Delta"
               << std::setw(2) << "|"
@@ -388,21 +387,21 @@ int main()
     for (size_t i = 0; i < segmentCount; ++i) {
         const auto& res = segmentDistances[i];
 
-        total += res.value;
+        total += res.distance;
 
         std::cout << std::fixed << std::setprecision(3)
                   << std::setw(2) << "|"
                   << std::setw(10) << (i + 1)
                   << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",solidifyBaseDistances[i])
+                  << std::setw(20) << std::format("Total: {:.4f}",compressSolidifies[i])
                   << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",compressBaseDistances[i])
+                  << std::setw(20) << std::format("Total: {:.4f}",compressCapacities[i])
                   << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",res.base)
+                  << std::setw(20) << std::format("Total: {:.4f}",res.compressBase)
                   << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",res.delta)
+                  << std::setw(20) << std::format("Total: {:.4f}",res.expandDelta)
                   << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",res.value)
+                  << std::setw(20) << std::format("Total: {:.4f}",res.distance)
                   << std::setw(2) << "|"
                   << '\n';
     }
