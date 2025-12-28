@@ -26,7 +26,7 @@ The simplest form of partitioning where every segment receives an equal portion 
 ![Discadelta: Simple equal partitioning (800px root → 4 segments of 200px each)](images/DiscadeltaDocImage01.jpg)
 
 
-### 2. Expand Delta 
+### 2. Expand Delta
 When the root distance is larger than the sum of all segment bases, the "Expand Delta" is used to fill the remaining space proportionally.
 
 **Key Definitions**:
@@ -46,34 +46,34 @@ When the root distance is larger than the sum of all segment bases, the "Expand 
 
 
 * **Configuration**:
-    
-    | Segment | Base   | expandRatio  |
-    |---------|--------|--------------|
-    | 1       | 100    | 0.5          |
-    | 2       | 150    | 1.0          |
-    | 3       | 200    | 2.0          |
-    | 4       | 50     | 0.5          |
+
+  | Segment | Base   | expandRatio  |
+      |---------|--------|--------------|
+  | 1       | 100    | 0.5          |
+  | 2       | 150    | 1.0          |
+  | 3       | 200    | 2.0          |
+  | 4       | 50     | 0.5          |
 
 * **Pre-Compute Table**:
 
   | Metric                  | Iterate               | Sum |
-  |-------------------------|-----------------------|-----|
+    |-------------------------|-----------------------|-----|
   | accumulateBaseDistance  | 100 + 150 + 200 + 50  | 500 |
   | accumulateExpandRatio   | 0.5 + 1.0 + 2.0 + 0.5 | 4.0 |
 
   | Metric               | Value             |
-  |----------------------|-------------------|
+    |----------------------|-------------------|
   | rootDistance         | 800               |
   | remainExpandDistance | 800 - 500  =  300 |
 
 * **Dynamic Expand Distance Table**:
-    
-    | Segment | reExpandDistance | acExpandRatio | expandDelta     | Base + expandDelta | Distance |
-    |---------|------------------|---------------|-----------------|--------------------|----------|
-    | 1       | 300              | 4.0           | 300 / 4.0 * 0.5 | 100 + 37.5         | 137.5    |
-    | 2       | 300              | 4.0           | 300 / 4.0 * 1.0 | 150 + 75           | 225      |
-    | 3       | 300              | 4.0           | 300 / 4.0 * 2.0 | 200 + 150          | 350      |
-    | 4       | 300              | 4.0           | 300 / 4.0 * 0.5 | 50  + 37.5         | 87.5     |
+
+  | Segment | reExpandDistance | acExpandRatio | expandDelta     | Base + expandDelta | Distance |
+      |---------|------------------|---------------|-----------------|--------------------|----------|
+  | 1       | 300              | 4.0           | 300 / 4.0 * 0.5 | 100 + 37.5         | 137.5    |
+  | 2       | 300              | 4.0           | 300 / 4.0 * 1.0 | 150 + 75           | 225      |
+  | 3       | 300              | 4.0           | 300 / 4.0 * 2.0 | 200 + 150          | 350      |
+  | 4       | 300              | 4.0           | 300 / 4.0 * 0.5 | 50  + 37.5         | 87.5     |
 
 * **Total**: `137.5` + `225` + `350` + `87.5` = `800`
 
@@ -96,23 +96,23 @@ Floating-point math can result in small overflows or gaps (e.g., $800.000001$). 
 
 
 * **Configuration**:
-        
-    | Segment | Base   | expandRatio |
-    |---------|--------|-------------|
-    | 1       | 100    | 0.3         |
-    | 2       | 150    | 1.0         |
-    | 3       | 70     | 1.0         |
-    | 4       | 50     | 0.8         |
+
+  | Segment | Base   | expandRatio |
+      |---------|--------|-------------|
+  | 1       | 100    | 0.3         |
+  | 2       | 150    | 1.0         |
+  | 3       | 70     | 1.0         |
+  | 4       | 50     | 0.8         |
 
 * **Pre-Compute Table**:
 
   | Metric                  | Iterate               | Sum |
-  |-------------------------|-----------------------|-----|
+    |-------------------------|-----------------------|-----|
   | accumulateBaseDistance  | 100 + 150 + 70 + 50   | 370 |
   | accumulateExpandRatio   | 0.3 + 1.0 + 1.0 + 0.8 | 3.1 |
 
   | Metric                | Value                                           |
-  |-----------------------|-------------------------------------------------|
+    |-----------------------|-------------------------------------------------|
   | rootDistance          | 800                                             |
   | cascadeExpandDistance | rootDistance(800) - accumulateBaseDistance(370) |
   | cascadeExpandRatio    | accumulateExpandRatio(3.1)                      |
@@ -120,7 +120,7 @@ Floating-point math can result in small overflows or gaps (e.g., $800.000001$). 
 * **Dynamic Expand Distance Table**:
 
   | Segment | cascadeExpandDistance  | cascadeExpandRatio  | expandDelta           | Base + expandDelta   | Distance        |
-  |---------|------------------------|---------------------|-----------------------|----------------------|-----------------|
+    |---------|------------------------|---------------------|-----------------------|----------------------|-----------------|
   | 1       | 430                    | 3.1                 | 430 / 3.1 * 0.3       | 100 + 41.6129032258  | 141.6129032258  |
   | 2       | 388.387096774          | 2.8                 | 388.38... / 2.8 * 1.0 | 150 + 138.7096774194 | 288.7096774194  |
   | 3       | 249.6774193548         | 1.8                 | 249.67... / 1.8 * 1.0 | 70  + 138.7096774193 | 208.7096774193  |
@@ -133,7 +133,7 @@ Floating-point math can result in small overflows or gaps (e.g., $800.000001$). 
 * **Cascade Table**:
 
   | Iterate   | cascadeExpandDistance   | expandDelta      | cascadeExpandRatio | expandRatio |
-  |-----------|-------------------------|------------------|--------------------|-------------|
+    |-----------|-------------------------|------------------|--------------------|-------------|
   | 0         | 430                     | -41.6129032258   | 3.1                | -0.3        |
   | 1         | 388.387096774           | -138.7096774194  | 2.8                | -1.0        |
   | 2         | 249.6774193548          | -138.7096774193  | 1.8                | -1.0        |
@@ -165,57 +165,57 @@ When the total base distance required is greater than the root distance ($rootBa
 
 
 * **Configuration**:
-    
-    | Segment | Base | compressRatio | shareRatio |
-    |---------|------|---------------|------------|
-    | 1       | 200  | 0.7           | 0.1        |
-    | 2       | 300  | 1.0           | 1.0        |
-    | 3       | 150  | 1.0           | 2.0        |
-    | 4       | 250  | 0.3           | 0.5        |
+
+  | Segment | Base | compressRatio | shareRatio |
+      |---------|------|---------------|------------|
+  | 1       | 200  | 0.7           | 0.1        |
+  | 2       | 300  | 1.0           | 1.0        |
+  | 3       | 150  | 1.0           | 2.0        |
+  | 4       | 250  | 0.3           | 0.5        |
 
 
 * **Pre-Compute Table**:
-    
-    | Metric                     | Iterate               | Sum |
-    |----------------------------|-----------------------|-----|
-    | compressCapacity           | 170 , 300 , 150 ,  75 | -   |
-    | compressSolidify           | 30  ,   0 ,   0 , 175 | -   |
-    | accumulateBaseDistance     | 200 + 300 + 150 + 250 | 900 |
-    | accumulateCompressSolidify | 30  +   0 +   0 + 175 | 205 |
 
-    | Metric                  | Value                           |
-    |-------------------------|---------------------------------|
-    | rootDistance            | 800                             |
-    | cascadeCompressDistance | rootDistance(800)               |
-    | cascadeBaseDistance     | accumulateBaseDistance(900)     |
-    | cascadeCompressSolidify | accumulateCompressSolidify(205) |
+  | Metric                     | Iterate               | Sum |
+      |----------------------------|-----------------------|-----|
+  | compressCapacity           | 170 , 300 , 150 ,  75 | -   |
+  | compressSolidify           | 30  ,   0 ,   0 , 175 | -   |
+  | accumulateBaseDistance     | 200 + 300 + 150 + 250 | 900 |
+  | accumulateCompressSolidify | 30  +   0 +   0 + 175 | 205 |
+
+  | Metric                  | Value                           |
+      |-------------------------|---------------------------------|
+  | rootDistance            | 800                             |
+  | cascadeCompressDistance | rootDistance(800)               |
+  | cascadeBaseDistance     | accumulateBaseDistance(900)     |
+  | cascadeCompressSolidify | accumulateCompressSolidify(205) |
 
 * **Dynamic Base Table**:
 
-    | Segment | Compress Solidify | Compress Capacity | Compress Distance |
-    |---------|-------------------|-------------------|-------------------|
-    | 1       | 60                | 140               | 178.9474          |
-    | 2       | 0                 | 300               | 254.8872          |
-    | 3       | 0                 | 150               | 127.4436          |
-    | 4       | 175               | 75                | 238.7218          |
+  | Segment | Compress Solidify | Compress Capacity | Compress Distance |
+      |---------|-------------------|-------------------|-------------------|
+  | 1       | 60                | 140               | 178.9474          |
+  | 2       | 0                 | 300               | 254.8872          |
+  | 3       | 0                 | 150               | 127.4436          |
+  | 4       | 175               | 75                | 238.7218          |
 
 
 * **Total**: `178.9474` + `254.8872` + `127.4436` + `238.7218` = `800`
 
 
 * **Cascade Table**:
-    
-    | Iterate   | cascadeCompressDistance  | Compress Distance  | cascadeBaseDistance  | base | cascadeCompressSolidify  | solidify |
-    |-----------|--------------------------|--------------------|----------------------|------|--------------------------|----------|
-    | 0         | 800                      | -178.9474          | 900                  | -200 | 235                      | -60      |
-    | 1         | 621.0526                 | -254.8872          | 700                  | -300 | 175                      | -0       |
-    | 2         | 366.1654                 | -127.4436          | 400                  | -150 | 175                      | -0       |
-    | 3         | 238.7218                 | -238.7218          | 250                  | -250 | 175                      | -175     |
+
+  | Iterate   | cascadeCompressDistance  | Compress Distance  | cascadeBaseDistance  | base | cascadeCompressSolidify  | solidify |
+      |-----------|--------------------------|--------------------|----------------------|------|--------------------------|----------|
+  | 0         | 800                      | -178.9474          | 900                  | -200 | 235                      | -60      |
+  | 1         | 621.0526                 | -254.8872          | 700                  | -300 | 175                      | -0       |
+  | 2         | 366.1654                 | -127.4436          | 400                  | -150 | 175                      | -0       |
+  | 3         | 238.7218                 | -238.7218          | 250                  | -250 | 175                      | -175     |
 
 
 *At the end of the loop, `cascadeCompressDistance`, `cascadeBaseDistance` and `cascadeCompressSolidify` will reach exactly **0**.*
 
-  
+
 ## Code Sample (C++23)
 Below is the implementation of the **Underflow Handling** scenario, ensuring the total distance exactly matches the root.
 
@@ -389,7 +389,7 @@ int main()
     }
 ```
 
-## Summary
+Summary
 
 Chapter 1 establishes the foundation for static partitioning. By using the Cascade method, Discadelta ensures that no matter how complex the ratios are, the sum of segments will always equal the root distance exactly.
 
