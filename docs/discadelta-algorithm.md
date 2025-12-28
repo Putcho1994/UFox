@@ -19,9 +19,9 @@ Calculate the distance of an individual segment given the root distance.
 The simplest form of partitioning where every segment receives an equal portion of the total distance.
 
 **Method**:
-* **rootDistance** = `800`
-* **numSegments** = `4`
-* **Formula**: $SegmentDistance = rootDistance / numSegments$
+* $rootDistance = 800$
+* $numSegments = 4$
+* $SegmentDistance = rootDistance / numSegments$
 
 ![Discadelta: Simple equal partitioning (800px root → 4 segments of 200px each)](images/DiscadeltaDocImage01.jpg)
 
@@ -35,9 +35,10 @@ Logically, each segment should get **200**. However, it becomes complex if each 
 3. **Accumulate Ratio** A Sum of all `shareRatioₙ`.
 
 **Method**:
-* **rootDistance** = `800`
-* **Accumulate Ratio**: It's a sum of all `segmentRatioₙ` configuration.
-* **Formula**: $SegmentDistance = rootDistance / accumulateRatio * segmentRatioₙ$
+* $rootDistance = 800$
+* $accumulateRatio = sum(shareRatioₙ)$
+* $SegmentDistance = rootDistance / accumulateRatio * segmentRatioₙ$
+
 
 * **Configuration**:
     
@@ -72,11 +73,11 @@ When segments use ratios, floating-point math can result in small overflows or g
 **Method**:
 * **rootDistance** = `800`
 * **Prepare Begin Compute Phase**
-    * **accumulateBaseDistance** = sum(`baseₙ`)
-    * **accumulateShareRatio** = sum(`segmentRatioₙ`)
-    * **remainShareRatio** = `accumulateShareRatio`
-    * **remainBaseDistance** = `accumulateBaseDistance`
-    * **remainShareDistance** = `rootDistance` - `accumulateBaseDistance`
+    * $accumulateBaseDistance = sum(baseₙ)$
+    * $accumulateShareRatio = sum(segmentRatioₙ)$
+    * $remainShareRatio = accumulateShareRatio$
+    * $remainBaseDistance = accumulateBaseDistance$
+    * $remainShareDistance = rootDistance - accumulateBaseDistance$
 
 
 * **Configuration**:
@@ -108,9 +109,6 @@ When the total base distance required by segments is greater than the root dista
 2. **Compress Base Distance**: The "flexible" portion of the segment that the algorithm scales down first to fit the root distance.
 3. **Accumulate Base Distance**: The sum of all base distances before compression.
 
-### The Underflow Formula
-For each segment $n$, the **Dynamic Base Distance** is calculated as:
-
 
 **Method**:
 
@@ -124,16 +122,17 @@ For each segment $n$, the **Dynamic Base Distance** is calculated as:
     | 4       | 250  | 0.3           | 0.5        |
 
 * **Prepare Begin Compute Phase**
-   * **compressBaseDistanceₙ** = `baseₙ` * `compressRatioₙ`
-   * **solidifyBaseDistanceₙ** = `baseₙ` - `compressBaseDistanceₙ`
-   * **accumulateBaseDistance** = sum(`baseₙ`)
-   * **accumulateSolidifyBaseDistance** = sum(`solidifyBaseDistanceₙ`)
+   * $compressBaseDistanceₙ = baseₙ * compressRatioₙ$
+   * $solidifyBaseDistanceₙ = baseₙ - compressBaseDistanceₙ$
+   * $accumulateBaseDistance = sum(baseₙ)$
+   * $accumulateSolidifyBaseDistance = sum(solidifyBaseDistanceₙ)$
   
+
 * **Set Remain Metrics for Cascading**
-  * **remainShareDistance** = `rootDistance`
-  * **remainBaseDistance** = `accumulateBaseDistance`
-  * **remainSolidifyBaseDistance** = `accumulateSolidifyBaseDistance`
-* **Formula**: $$dynamicBaseDistance = \left( \frac{remainShareDistance - remainSolidify}{remainBase - remainSolidify} \right) \times compressBase + solidifyBase$$
+  * $remainShareDistance = rootDistance$
+  * $remainBaseDistance = accumulateBaseDistance$
+  * $remainSolidifyBaseDistance = accumulateSolidifyBaseDistance$
+* $$dynamicBaseDistance = \left( \frac{remainShareDistance - remainSolidify}{remainBase - remainSolidify} \right) \times compressBase + solidifyBase$$
 
 * **Pre-Compute Table**:
     
