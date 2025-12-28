@@ -344,15 +344,15 @@ int main()
 
         if (cascadeExpandDistance > 0.0f) {
             for (size_t i = 0; i < segmentCount; ++i) {
-                const float& shareRatio = expandRatios[i];
-                const float expandDelta = cascadeExpandRatio <= 0.0f || shareRatio <= 0.0f? 0.0f :
-                cascadeExpandDistance / cascadeExpandRatio * shareRatio;
+                const float& expandRatio = expandRatios[i];
+                const float expandDelta = cascadeExpandRatio <= 0.0f || expandRatio <= 0.0f? 0.0f :
+                cascadeExpandDistance / cascadeExpandRatio * expandRatio;
 
                 segmentDistances[i].expandDelta = expandDelta;
                 segmentDistances[i].distance += expandDelta; //add to precompute
 
                 cascadeExpandDistance -= expandDelta;
-                cascadeExpandRatio -= shareRatio;
+                cascadeExpandRatio -= expandRatio;
             }
         }
     }

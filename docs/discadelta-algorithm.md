@@ -48,7 +48,7 @@ When the root distance is larger than the sum of all segment bases, the "Expand 
 * **Configuration**:
 
   | Segment | Base   | expandRatio  |
-      |---------|--------|--------------|
+  |---------|--------|--------------|
   | 1       | 100    | 0.5          |
   | 2       | 150    | 1.0          |
   | 3       | 200    | 2.0          |
@@ -57,19 +57,19 @@ When the root distance is larger than the sum of all segment bases, the "Expand 
 * **Pre-Compute Table**:
 
   | Metric                  | Iterate               | Sum |
-    |-------------------------|-----------------------|-----|
+  |-------------------------|-----------------------|-----|
   | accumulateBaseDistance  | 100 + 150 + 200 + 50  | 500 |
   | accumulateExpandRatio   | 0.5 + 1.0 + 2.0 + 0.5 | 4.0 |
 
   | Metric               | Value             |
-    |----------------------|-------------------|
+  |----------------------|-------------------|
   | rootDistance         | 800               |
   | remainExpandDistance | 800 - 500  =  300 |
 
 * **Dynamic Expand Distance Table**:
 
   | Segment | reExpandDistance | acExpandRatio | expandDelta     | Base + expandDelta | Distance |
-      |---------|------------------|---------------|-----------------|--------------------|----------|
+  |---------|------------------|---------------|-----------------|--------------------|----------|
   | 1       | 300              | 4.0           | 300 / 4.0 * 0.5 | 100 + 37.5         | 137.5    |
   | 2       | 300              | 4.0           | 300 / 4.0 * 1.0 | 150 + 75           | 225      |
   | 3       | 300              | 4.0           | 300 / 4.0 * 2.0 | 200 + 150          | 350      |
@@ -91,14 +91,14 @@ Floating-point math can result in small overflows or gaps (e.g., $800.000001$). 
 * $accumulateBaseDistance = sum(base_n)$
 * $accumulateExpandRatio = sum(expandRatio_n)$
 * $cascadeExpandDistance = rootDistance - accumulateBaseDistance$
-* $cascadeExpandRatio = accumulateExpandRatio$ (New)
-* $expandDelta = \left( \frac{cascadeExpandDistance}{cascadeExpandRatio}\right) \times expandRatio_n$ (New)
+* $cascadeExpandRatio = accumulateExpandRatio$
+* $expandDelta = \left( \frac{cascadeExpandDistance}{cascadeExpandRatio}\right) \times expandRatio_n$
 
 
 * **Configuration**:
 
   | Segment | Base   | expandRatio |
-      |---------|--------|-------------|
+  |---------|--------|-------------|
   | 1       | 100    | 0.3         |
   | 2       | 150    | 1.0         |
   | 3       | 70     | 1.0         |
@@ -107,12 +107,12 @@ Floating-point math can result in small overflows or gaps (e.g., $800.000001$). 
 * **Pre-Compute Table**:
 
   | Metric                  | Iterate               | Sum |
-    |-------------------------|-----------------------|-----|
+  |-------------------------|-----------------------|-----|
   | accumulateBaseDistance  | 100 + 150 + 70 + 50   | 370 |
   | accumulateExpandRatio   | 0.3 + 1.0 + 1.0 + 0.8 | 3.1 |
 
   | Metric                | Value                                           |
-    |-----------------------|-------------------------------------------------|
+  |-----------------------|-------------------------------------------------|
   | rootDistance          | 800                                             |
   | cascadeExpandDistance | rootDistance(800) - accumulateBaseDistance(370) |
   | cascadeExpandRatio    | accumulateExpandRatio(3.1)                      |
@@ -120,7 +120,7 @@ Floating-point math can result in small overflows or gaps (e.g., $800.000001$). 
 * **Dynamic Expand Distance Table**:
 
   | Segment | cascadeExpandDistance  | cascadeExpandRatio  | expandDelta           | Base + expandDelta   | Distance        |
-    |---------|------------------------|---------------------|-----------------------|----------------------|-----------------|
+  |---------|------------------------|---------------------|-----------------------|----------------------|-----------------|
   | 1       | 430                    | 3.1                 | 430 / 3.1 * 0.3       | 100 + 41.6129032258  | 141.6129032258  |
   | 2       | 388.387096774          | 2.8                 | 388.38... / 2.8 * 1.0 | 150 + 138.7096774194 | 288.7096774194  |
   | 3       | 249.6774193548         | 1.8                 | 249.67... / 1.8 * 1.0 | 70  + 138.7096774193 | 208.7096774193  |
@@ -133,13 +133,12 @@ Floating-point math can result in small overflows or gaps (e.g., $800.000001$). 
 * **Cascade Table**:
 
   | Iterate   | cascadeExpandDistance   | expandDelta      | cascadeExpandRatio | expandRatio |
-    |-----------|-------------------------|------------------|--------------------|-------------|
+  |-----------|-------------------------|------------------|--------------------|-------------|
   | 0         | 430                     | -41.6129032258   | 3.1                | -0.3        |
   | 1         | 388.387096774           | -138.7096774194  | 2.8                | -1.0        |
   | 2         | 249.6774193548          | -138.7096774193  | 1.8                | -1.0        |
   | 3         | 110.9677419355          | -110.9677419355  | 0.8                | -0.8        |
 
-*At the end of the loop, `cascadeExpandDistance` and `cascadeExpandRatio` will reach exactly **0**.*
 
 ## Compress Base Distance (Underflow Handling)
 When the total base distance required is greater than the root distance ($rootBase < accumulateBaseDistance$), the algorithm scales bases down proportionally while protecting "Solidified" areas.
@@ -161,39 +160,39 @@ When the total base distance required is greater than the root distance ($rootBa
 * $cascadeCompressDistance = rootDistance$
 * $cascadeBaseDistance = accumulateBaseDistance$
 * $cascadeCompressSolidify = accumulateCompressSolidify$
-* $$compressBaseDistance = \left( \frac{remainShareDistance - remainSolidify}{remainBase - remainSolidify} \right) \times compressBase + solidifyBase$$
+* $$compressBaseDistance = \left( \frac{remainShareDistance - remainSolidify}{remainBase - remainSolidify} \right) \times compressBase + compressSolidify$$
 
 
 * **Configuration**:
 
-  | Segment | Base | compressRatio | shareRatio |
-      |---------|------|---------------|------------|
-  | 1       | 200  | 0.7           | 0.1        |
-  | 2       | 300  | 1.0           | 1.0        |
-  | 3       | 150  | 1.0           | 2.0        |
-  | 4       | 250  | 0.3           | 0.5        |
+  | Segment | Base | compressRatio | expandRatio  |
+  |---------|------|---------------|--------------|
+  | 1       | 200  | 0.7           | 0.1          |
+  | 2       | 300  | 1.0           | 1.0          |
+  | 3       | 150  | 1.0           | 2.0          |
+  | 4       | 250  | 0.3           | 0.5          |
 
 
 * **Pre-Compute Table**:
 
   | Metric                     | Iterate               | Sum |
-      |----------------------------|-----------------------|-----|
+  |----------------------------|-----------------------|-----|
   | compressCapacity           | 170 , 300 , 150 ,  75 | -   |
-  | compressSolidify           | 30  ,   0 ,   0 , 175 | -   |
+  | compressSolidify           | 60  ,   0 ,   0 , 175 | -   |
   | accumulateBaseDistance     | 200 + 300 + 150 + 250 | 900 |
-  | accumulateCompressSolidify | 30  +   0 +   0 + 175 | 205 |
+  | accumulateCompressSolidify | 60  +   0 +   0 + 175 | 235 |
 
   | Metric                  | Value                           |
-      |-------------------------|---------------------------------|
+  |-------------------------|---------------------------------|
   | rootDistance            | 800                             |
   | cascadeCompressDistance | rootDistance(800)               |
   | cascadeBaseDistance     | accumulateBaseDistance(900)     |
-  | cascadeCompressSolidify | accumulateCompressSolidify(205) |
+  | cascadeCompressSolidify | accumulateCompressSolidify(235) |
 
 * **Dynamic Base Table**:
 
   | Segment | Compress Solidify | Compress Capacity | Compress Distance |
-      |---------|-------------------|-------------------|-------------------|
+  |---------|-------------------|-------------------|-------------------|
   | 1       | 60                | 140               | 178.9474          |
   | 2       | 0                 | 300               | 254.8872          |
   | 3       | 0                 | 150               | 127.4436          |
@@ -206,20 +205,39 @@ When the total base distance required is greater than the root distance ($rootBa
 * **Cascade Table**:
 
   | Iterate   | cascadeCompressDistance  | Compress Distance  | cascadeBaseDistance  | base | cascadeCompressSolidify  | solidify |
-      |-----------|--------------------------|--------------------|----------------------|------|--------------------------|----------|
+  |-----------|--------------------------|--------------------|----------------------|------|--------------------------|----------|
   | 0         | 800                      | -178.9474          | 900                  | -200 | 235                      | -60      |
   | 1         | 621.0526                 | -254.8872          | 700                  | -300 | 175                      | -0       |
   | 2         | 366.1654                 | -127.4436          | 400                  | -150 | 175                      | -0       |
   | 3         | 238.7218                 | -238.7218          | 250                  | -250 | 175                      | -175     |
 
 
-*At the end of the loop, `cascadeCompressDistance`, `cascadeBaseDistance` and `cascadeCompressSolidify` will reach exactly **0**.*
+## Important Notes
+- Cascade is sequential: segment order affects final distribution.
+- All remainders reach exactly 0 due to subtraction.
 
 
 ## Code Sample (C++23)
 Below is the implementation of the **Underflow Handling** scenario, ensuring the total distance exactly matches the root.
 
 ```cpp
+#include <iostream>
+#include <vector>
+#include <format>
+#include <iomanip>
+
+struct DiscadeltaSegment {
+    float compressBase;
+    float expandDelta;
+    float distance;
+};
+
+struct DiscadeltaSegmentConfig {
+    float base;
+    float compressRatio;
+    float expandRatio;
+};
+
 int main()
 {
     std::vector<DiscadeltaSegmentConfig> segmentConfigs{
@@ -319,15 +337,15 @@ int main()
 
         if (cascadeExpandDistance > 0.0f) {
             for (size_t i = 0; i < segmentCount; ++i) {
-                const float& shareRatio = expandRatios[i];
-                const float expandDelta = cascadeExpandRatio <= 0.0f || shareRatio <= 0.0f? 0.0f :
-                cascadeExpandDistance / cascadeExpandRatio * shareRatio;
+                const float& expandRatio = expandRatios[i];
+                const float expandDelta = cascadeExpandRatio <= 0.0f || expandRatio <= 0.0f? 0.0f :
+                cascadeExpandDistance / cascadeExpandRatio * expandRatio;
 
                 segmentDistances[i].expandDelta = expandDelta;
                 segmentDistances[i].distance += expandDelta; //add to precompute
 
                 cascadeExpandDistance -= expandDelta;
-                cascadeExpandRatio -= shareRatio;
+                cascadeExpandRatio -= expandRatio;
             }
         }
     }
