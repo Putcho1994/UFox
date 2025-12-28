@@ -213,9 +213,9 @@ When the total base distance required is greater than the root distance ($rootBa
 
 
 ## Important Notes
-- Cascade is sequential: segment order affects final distribution.
-- All remainders reach exactly 0 due to subtraction.
-- Negative ratios or bases are clamped to 0.
+- **Parameter Validation**: All input configurations (Bases, Expand Ratios, Compress Ratios) MUST be clamped to a minimum of 0.0 to prevent logical corruption.
+- **Cascade Sequence**: Because the cascade is sequential, the order of segments can slightly affect sub-pixel distribution.
+- **Precision**: All remainders reach exactly 0 due to the cascading subtraction logic.
 
 ## Code Sample (C++23)
 Below is the implementation of the **Underflow Handling** scenario, ensuring the total distance exactly matches the root.
@@ -227,7 +227,7 @@ Below is the implementation of the **Underflow Handling** scenario, ensuring the
 #include <iomanip>
 
 struct DiscadeltaSegment {
-    float compressBase;
+    float base;
     float expandDelta;
     float distance;
 };
@@ -262,15 +262,13 @@ int main()
 #pragma region // Prepare Compute Context
     constexpr float rootBase = 800.0f;
 
+    // Internal containers for validated data
     std::vector<float> compressCapacities{};
     compressCapacities.reserve(segmentCount);
-
     std::vector<float> compressSolidifies{};
     compressSolidifies.reserve(segmentCount);
-
     std::vector<float> baseDistances{};
     baseDistances.reserve(segmentCount);
-
     std::vector<float> expandRatios{};
     expandRatios.reserve(segmentCount);
 
@@ -279,24 +277,29 @@ int main()
     float accumulateExpandRatio{0.0f};
 
     for (size_t i = 0; i < segmentCount; ++i) {
-        const auto &[base, compressRatio, expandRatio] = segmentConfigs[i];
+        const auto &[rawBase, rawCompressRatio, rawExpandRatio] = segmentConfigs[i];
 
-        //Calculate base proportion metrics
+        // --- VALIDATION STEP ---
+        // Clamp all configurations to 0.0 to prevent negative distance logic errors
+        const float base = std::max(rawBase, 0.0f);
+        const float compressRatio = std::max(rawCompressRatio, 0.0f);
+        const float expandRatio = std::max(rawExpandRatio, 0.0f);
+
+        // Calculate base proportion metrics
         const float compressCapacity = base * compressRatio;
         const float compressSolidify = base - compressCapacity;
-        const float validatedBaseDistance = std::max(base, 0.0f); // no negative
 
         compressCapacities.push_back(compressCapacity);
         compressSolidifies.push_back(compressSolidify);
-        baseDistances.push_back(validatedBaseDistance);
+        baseDistances.push_back(base);
 
-        //Accumulate share proportion capacity metrics:
-        accumulateBaseDistance += validatedBaseDistance;
+        // Accumulate metrics
+        accumulateBaseDistance += base;
         accumulateCompressSolidify += compressSolidify;
 
         DiscadeltaSegment& segment = segmentDistances[i];
-        segment.compressBase = validatedBaseDistance;
-        segment.distance = validatedBaseDistance;
+        segment.base = base;
+        segment.distance = base;
 
         expandRatios.push_back(expandRatio);
         accumulateExpandRatio += expandRatio;
@@ -318,11 +321,11 @@ int main()
             const float remainCompressCapacity = cascadeBaseDistance - cascadeCompressSolidify;
             const float& compressCapacity = compressCapacities[i];
             const float& compressSolidify = compressSolidifies[i];
-            const float compressBaseDistance = remainCompressDistance <= 0 || remainCompressCapacity <= 0 || compressCapacity <= 0? 0.0f:
-            std::max(0.0f, remainCompressDistance / remainCompressCapacity * compressCapacity + compressSolidify);
+            const float compressBaseDistance = (remainCompressDistance <= 0 || remainCompressCapacity <= 0 || compressCapacity <= 0? 0.0f:
+            remainCompressDistance / remainCompressCapacity * compressCapacity) + compressSolidify;
 
             DiscadeltaSegment& segment = segmentDistances[i];
-            segment.compressBase = compressBaseDistance;
+            segment.base = compressBaseDistance;
             segment.distance = compressBaseDistance; //overwrite pre compute
 
             cascadeCompressDistance -= compressBaseDistance;
@@ -390,7 +393,7 @@ int main()
                   << std::setw(2) << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",compressCapacities[i])
                   << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",res.compressBase)
+                  << std::setw(20) << std::format("Total: {:.4f}",res.base)
                   << std::setw(2) << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",res.expandDelta)
                   << std::setw(2) << "|"

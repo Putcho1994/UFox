@@ -240,19 +240,30 @@ struct DiscadeltaSegment {
 };
 
 struct DiscadeltaSegmentConfig {
+    std::string name;
     float base;
     float compressRatio;
     float expandRatio;
+    float min;
+    float max;
 };
 
 int main()
 {
     std::vector<DiscadeltaSegmentConfig> segmentConfigs{
-        {200.0f, 0.7f, 0.1f},
-        {300.0f, 1.0f, 1.0f},
-        {150.0f, 1.0f, 2.0f},
-        {250.0f, 0.3f, 0.5f}
+        {"1",200.0f, 0.7f, 0.1f ,0.0f, 100.0f},
+        {"2",200.0f, 1.0f, 1.0f ,300.0f, 800.0f},
+        {"3",150.0f, 0.0f, 2.0f, 0.0f, 200.0f},
+        {"4",350.0f, 0.3f, 0.5f, 50.0f, 300.0f}
     };
+
+
+    // std::vector<DiscadeltaSegmentConfig> segmentConfigs{
+    //     {200.0f, 0.7f, 0.1f},
+    //     {300.0f, 1.0f, 1.0f},
+    //     {150.0f, 1.0f, 2.0f},
+    //     {250.0f, 0.3f, 0.5f}
+    // };
 
     // std::vector<DiscadeltaSegmentConfig> segmentConfigs{
     //         {100.0f, 1.0f, 0.3f},
@@ -269,15 +280,13 @@ int main()
 #pragma region // Prepare Compute Context
     constexpr float rootBase = 800.0f;
 
+    // Internal containers for validated data
     std::vector<float> compressCapacities{};
     compressCapacities.reserve(segmentCount);
-
     std::vector<float> compressSolidifies{};
     compressSolidifies.reserve(segmentCount);
-
     std::vector<float> baseDistances{};
     baseDistances.reserve(segmentCount);
-
     std::vector<float> expandRatios{};
     expandRatios.reserve(segmentCount);
 
@@ -286,24 +295,29 @@ int main()
     float accumulateExpandRatio{0.0f};
 
     for (size_t i = 0; i < segmentCount; ++i) {
-        const auto &[base, compressRatio, expandRatio] = segmentConfigs[i];
+        const auto &[name,rawBase, rawCompressRatio, rawExpandRatio, rawMin, rawMax] = segmentConfigs[i];
 
-        //Calculate base proportion metrics
+        // --- VALIDATION STEP ---
+        // Clamp all configurations to 0.0 to prevent negative distance logic errors
+        const float base = std::max(rawBase, 0.0f);
+        const float compressRatio = std::max(rawCompressRatio, 0.0f);
+        const float expandRatio = std::max(rawExpandRatio, 0.0f);
+
+        // Calculate base proportion metrics
         const float compressCapacity = base * compressRatio;
         const float compressSolidify = base - compressCapacity;
-        const float validatedBaseDistance = std::max(base, 0.0f); // no negative
 
         compressCapacities.push_back(compressCapacity);
         compressSolidifies.push_back(compressSolidify);
-        baseDistances.push_back(validatedBaseDistance);
+        baseDistances.push_back(base);
 
-        //Accumulate share proportion capacity metrics:
-        accumulateBaseDistance += validatedBaseDistance;
+        // Accumulate metrics
+        accumulateBaseDistance += base;
         accumulateCompressSolidify += compressSolidify;
 
         DiscadeltaSegment& segment = segmentDistances[i];
-        segment.base = validatedBaseDistance;
-        segment.distance = validatedBaseDistance;
+        segment.base = base;
+        segment.distance = base;
 
         expandRatios.push_back(expandRatio);
         accumulateExpandRatio += expandRatio;
@@ -325,8 +339,8 @@ int main()
             const float remainCompressCapacity = cascadeBaseDistance - cascadeCompressSolidify;
             const float& compressCapacity = compressCapacities[i];
             const float& compressSolidify = compressSolidifies[i];
-            const float compressBaseDistance = remainCompressDistance <= 0 || remainCompressCapacity <= 0 || compressCapacity <= 0? 0.0f:
-            std::max(0.0f, remainCompressDistance / remainCompressCapacity * compressCapacity + compressSolidify);
+            const float compressBaseDistance = (remainCompressDistance <= 0 || remainCompressCapacity <= 0 || compressCapacity <= 0? 0.0f:
+            remainCompressDistance / remainCompressCapacity * compressCapacity) + compressSolidify;
 
             DiscadeltaSegment& segment = segmentDistances[i];
             segment.base = compressBaseDistance;
