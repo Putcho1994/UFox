@@ -71,7 +71,7 @@ When segments use ratios, floating-point math can result in small overflows or g
 3.  **Update Ratio**: $remainRatio = remainRatio - segmentRatioₙ$
 
 **Method**:
-* **rootDistance** = `800`
+* $rootDistance = 800$
 * **Prepare Begin Compute Phase**
     * $accumulateBaseDistance = sum(baseₙ)$
     * $accumulateShareRatio = sum(segmentRatioₙ)$
@@ -111,6 +111,8 @@ When the total base distance required by segments is greater than the root dista
 
 
 **Method**:
+* $rootDistance = 800$
+
 
 * **Configuration**:
     
@@ -157,6 +159,7 @@ When the total base distance required by segments is greater than the root dista
 
 * **Total**: `178.9474` + `254.8872` + `127.4436` + `238.7218` = `800`
 
+
 * **Cascade Table**:
     
     | Iterate   | remainShareDistance | dynamicBase | remainBaseDistance | base | remainSolidifyBaseDistance | solidify |
@@ -171,8 +174,7 @@ When the total base distance required by segments is greater than the root dista
   * `remainBaseDistance` = `0`,
   * `remainSolidifyBaseDistance` = `0`
 
-
-
+  
 ## Code Sample (C++23)
 Below is the implementation of the **Underflow Handling** scenario, ensuring the total distance exactly matches the root.
 
