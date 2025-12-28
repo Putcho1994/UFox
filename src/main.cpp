@@ -234,7 +234,7 @@
 #include <iomanip>
 
 struct DiscadeltaSegment {
-    float compressBase;
+    float base;
     float expandDelta;
     float distance;
 };
@@ -302,7 +302,7 @@ int main()
         accumulateCompressSolidify += compressSolidify;
 
         DiscadeltaSegment& segment = segmentDistances[i];
-        segment.compressBase = validatedBaseDistance;
+        segment.base = validatedBaseDistance;
         segment.distance = validatedBaseDistance;
 
         expandRatios.push_back(expandRatio);
@@ -329,7 +329,7 @@ int main()
             std::max(0.0f, remainCompressDistance / remainCompressCapacity * compressCapacity + compressSolidify);
 
             DiscadeltaSegment& segment = segmentDistances[i];
-            segment.compressBase = compressBaseDistance;
+            segment.base = compressBaseDistance;
             segment.distance = compressBaseDistance; //overwrite pre compute
 
             cascadeCompressDistance -= compressBaseDistance;
@@ -397,7 +397,7 @@ int main()
                   << std::setw(2) << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",compressCapacities[i])
                   << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",res.compressBase)
+                  << std::setw(20) << std::format("Total: {:.4f}",res.base)
                   << std::setw(2) << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",res.expandDelta)
                   << std::setw(2) << "|"

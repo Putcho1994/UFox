@@ -215,7 +215,7 @@ When the total base distance required is greater than the root distance ($rootBa
 ## Important Notes
 - Cascade is sequential: segment order affects final distribution.
 - All remainders reach exactly 0 due to subtraction.
-
+- Negative ratios or bases are clamped to 0.
 
 ## Code Sample (C++23)
 Below is the implementation of the **Underflow Handling** scenario, ensuring the total distance exactly matches the root.
