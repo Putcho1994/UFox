@@ -92,7 +92,7 @@ Before performing any computation, Discadelta must **validate** and **sanitize**
    - std::clamp should be fine once max and min are validated, but if not, use custom if-statement base clamp.
 
 
-**we will turn a pre-compute section from the previous sample into a method.**
+### Pre-Compute Helper Method
 
 ```cpp
 constexpr auto MakeDiscadeltaContext = [](const std::vector<DiscadeltaSegmentConfig>& configs, const float& rootDistance) {
