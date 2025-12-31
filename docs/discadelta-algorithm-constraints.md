@@ -255,17 +255,20 @@ int main()
 
    | Segment   | Compress Solidify | Compress Capacity | Compress Distance | Expand Delta | Distance |
    |-----------|-------------------|-------------------|-------------------|--------------|----------|
-   | 1         | 60.0000           | 140.0000          | 168.5393          | 0.0000       | 168.5393 |
-   | 2         | 0.0000            | 200.0000          | 155.0562          | 0.0000       | 155.0562 |
+   | 1         | 30.0000           | 70.0000           | 92.3913           | 0.0000       | 92.3913  |
+   | 2         | 0.0000            | 300.0000          | 267.3913          | 0.0000       | 267.3913 |
    | 3         | 150.0000          | 0.0000            | 150.0000          | 0.0000       | 150.0000 |
-   | 4         | 245.0000          | 105.0000          | 326.4045          | 0.0000       | 326.4045 |
+   | 4         | 210.0000          | 90.0000           | 290.2174          | 0.0000       | 290.2174 |
 
-* **Total**: `168.5393` + `155.0562` + `150.0000` + `326.4045` = `800`
+* **Total**: `92.3913` + `267.3913` + `150.0000` + `290.2174` = `800`
 
-### Redistribute Base Distance
-The Sample above, the total result fits within the root distance, which might make it seem like the constraints are functioning properly. 
-However, this is not the case because the cascading mechanism ensures that all elements fit within the root distance without considering their intended proportions. 
-To address this, we need to implement a recursive method to redistribute the clamped delta space.
+### Redistribute Clamped Delta
+The current algorithm processes segments in a single forward pass, following the natural loop order.
+Each segment has no awareness of its siblings — it only sees the remaining space at its turn.
+When a segment hits its min/max limit, it takes its full guaranteed amount, forcing all subsequent segments to absorb the entire adjustment.
+Earlier segments remain unaffected, even if they have higher priority or more flexibility.
+This forward-pass design can lead to unfair distribution when constraints are active: later segments may give up disproportionately more space.
+To achieve proportional fairness (redistributing clamped delta across all unconstrained segments, regardless of order), we need a redistribution pass — ideally iterative or recursive — after detecting any clamping.
 
 
 **_unfinish doc working in progress..._**
