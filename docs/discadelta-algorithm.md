@@ -410,7 +410,7 @@ int main()
     }
 ```
 
-Summary
+## Summary
 
 Chapter 1 establishes the foundation for static partitioning. By using the Cascade method, Discadelta ensures that no matter how complex the ratios are, the sum of segments will always equal the root distance exactly.
 
