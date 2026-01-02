@@ -1,19 +1,38 @@
-# Discadelta Algorithm 🦊 (Chapter 1)
-
+# Discadelta: The High-Precision Rescaling Engine 🦊
 ## Overview
-> **Discadelta** = **Distance** + **Cascade** + **Delta**
+### Discadelta (Distance + Cascade + Delta) 
+Is a high-precision 1D rescaling algorithm designed to partition linear space into constrained, proportional segments. It provides a robust alternative to standard layout solvers by ensuring zero precision loss and fair redistribution of space.
 
-Discadelta is a 1D partitioning algorithm for dividing a line (width, height, edge length, etc.) into resizable segments. It powers the fit rect layout in the **UFox** engine's GUI/Editor system, providing a reliable method for linear splitting that prevents rounding errors.
+### The Anatomy: Base & Delta
+In Discadelta, every segment is treated as a dynamic entity composed of two distinct parts:
 
-### Core Components
-- **Distance**: The total available linear space (root distance).
-- **Cascade**: A method where the remainder of a calculation is passed to the next step to prevent rounding errors.
-- **Delta**: The specific amount added to or subtracted from a segment to reach the target size.
+* **The Base (Your Compressible Budget)**
+Think of the **Base** as the segment's "ideal" starting size. This is the default compressible distance. When the window gets smaller and there isn't enough room to fit everyone, the engine "squeezes" the Base. It represents the primary distance the segment occupies.
 
+
+* **The Delta (Your Fair Share of Growth)**
+The **Delta** is the engine's expansion valve. When the root distance is larger than the sum of all bases, the engine has "excess" distance to give away. The Delta is the fair share value split among sibling segments to refill that expanding distance.
+
+### The 3-Pass Lifecycle: Decoupling Logic from Reality
+Discadelta doesn't just "calculate and draw." It uses a strictly decoupled 3-pass architecture. This makes the system fast, predictable, and incredibly flexible.
+
+* **Pass 1: Pre-compute (The Analyst)**:
+  This pass validates all inputs (`min`, `max`, `base`) and establishing the "pressure" of the layout. 
+  It identifies whether the system needs to enter a Compression or Expansion state and establishes the priority order for processing.
+
+
+* **Pass 2: Scaling (The Resolver)**: 
+  The core mathematical engine. It uses a `Precision Cascade` to resolve the exact final size of every segment. 
+  By processing segments based on their constraint priority, it ensures that "fair share" is maintained even when segments hit their min/max limits.
+
+
+* **Pass 3: Placing (The Builder)**: 
+  Once every segment knows its size, the Placing Pass translates those distances into world-space offsets (positions). 
+  Because this is a separate pass, you can swap or reorder segments visually without ever needing to recalculate the complex scaling math.
 
 ## Theory
 ### Goal
-Calculate the distance of an individual segment given the root distance.
+Calculate the distance of an individual segment given the root distance as rescaling destination.
 
 ### 1. Fair Share Scenario
 The simplest form of partitioning where every segment receives an equal portion of the total distance.
