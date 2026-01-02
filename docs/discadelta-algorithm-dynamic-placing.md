@@ -210,3 +210,10 @@ We have now built a professional-grade 3-pass architecture:
 ### Conclusion
 
 Discadelta is now more than just a formula; it is a full-featured Layout Controller. It provides UFox with a rock-solid foundation where precision is guaranteed, constraints are respected, and the UI remains fluid and flexible under any condition.
+
+### Upcoming Extensions
+The journey doesn't end with 1D layouts. Stay tuned for upcoming extensions to the Discadelta ecosystem:
+
+- Discadelta Nested: Handling complex hierarchies and parent-child scaling pressure.
+
+- Discadelta Rect Layout: Moving from 1D lines to full 2D area management and grid-based partitioning.

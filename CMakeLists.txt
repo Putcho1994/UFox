@@ -1,16 +1,10 @@
 cmake_minimum_required(VERSION 4.0.0)
 set(CMAKE_CXX_STANDARD 23)
 
-
-
 project(UFoxEngine LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-
-
-
 
 
 # Use C++23 without compiler-specific extensions

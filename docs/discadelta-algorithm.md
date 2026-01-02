@@ -244,6 +244,7 @@ Below is the implementation of the **Underflow Handling** scenario, ensuring the
 #include <vector>
 #include <format>
 #include <iomanip>
+#include <thread>
 
 struct DiscadeltaSegment {
     float base;
@@ -257,13 +258,12 @@ struct DiscadeltaSegmentConfig {
     float expandRatio;
 };
 
-int main()
-{
+int main() {
     std::vector<DiscadeltaSegmentConfig> segmentConfigs{
-        {200.0f, 0.7f, 0.1f},
-        {300.0f, 1.0f, 1.0f},
-        {150.0f, 1.0f, 2.0f},
-        {250.0f, 0.3f, 0.5f}
+            {200.0f, 0.7f, 0.1f},
+            {300.0f, 1.0f, 1.0f},
+            {150.0f, 1.0f, 2.0f},
+            {250.0f, 0.3f, 0.5f}
     };
 
     // std::vector<DiscadeltaSegmentConfig> segmentConfigs{
@@ -376,28 +376,43 @@ int main()
 
 
 #pragma region //Print Result
-    std::cout << "\n=== Dynamic Base Segment (Underflow Handling) ===\n";
-    std::cout << std::format("Root distance: {:.4f}\n\n", rootBase);
+    std::cout << "=== Dynamic Base Segment (Underflow Handling) ===" << std::endl;
+    std::cout << std::format("Input distance: {}", rootBase)<< std::endl;
 
-  std::cout << std::string(123, '-') << '\n';
     // Table header
     std::cout << std::left
-              << std::setw(2) << "|"
+              << "|"
               << std::setw(10) << "Segment"
-              << std::setw(2) << "|"
+              << "|"
               << std::setw(20) << "Compress Solidify"
-              << std::setw(2) << "|"
+              << "|"
               << std::setw(20) << "Compress Capacity"
-              << std::setw(2) << "|"
+              << "|"
               << std::setw(20) << "Compress Distance"
-              << std::setw(2) << "|"
-              << std::setw(20) << "Expand Delta"
-              << std::setw(2) << "|"
+              << "|"
+              << std::setw(15) << "Expand Delta"
+              << "|"
               << std::setw(20) << "Scaled Distance"
-              << std::setw(2) << "|"
-              << '\n';
+              << "|"
+              << std::endl;
 
-    std::cout << std::string(123, '-') << '\n';
+    std::cout << std::left
+                   << "|"
+                   << std::string(10, '-')
+                   << "|"
+                   << std::string(20, '-')
+                   << "|"
+                   << std::string(20, '-')
+                   << "|"
+                   << std::string(20, '-')
+                   << "|"
+                   << std::string(15, '-')
+                   << "|"
+                   << std::string(20, '-')
+                   << "|"
+                   << std::endl;
+
+
     float total{0.0f};
     for (size_t i = 0; i < segmentCount; ++i) {
         const auto& res = segmentDistances[i];
@@ -405,28 +420,30 @@ int main()
         total += res.distance;
 
         std::cout << std::fixed << std::setprecision(3)
-                  << std::setw(2) << "|"
+                  << "|"
                   << std::setw(10) << (i + 1)
-                  << std::setw(2) << "|"
+                  << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",compressSolidifies[i])
-                  << std::setw(2) << "|"
+                  << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",compressCapacities[i])
-                  << std::setw(2) << "|"
+                  << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",res.base)
-                  << std::setw(2) << "|"
-                  << std::setw(20) << std::format("Total: {:.4f}",res.expandDelta)
-                  << std::setw(2) << "|"
+                  << "|"
+                  << std::setw(15) << std::format("Total: {:.4f}",res.expandDelta)
+                  << "|"
                   << std::setw(20) << std::format("Total: {:.4f}",res.distance)
-                  << std::setw(2) << "|"
-                  << '\n';
+                  << "|"
+                  << std::endl;
     }
 
-        std::cout << std::string(123, '-') << '\n';
-        std::cout << std::format("Total: {:.4f} (expected 800.0)\n", total);
-        #pragma endregion //Print Result
 
-        return 0;
-    }
+    std::cout << std::format("Total: {:.4f} (expected 800.0)\n", total);
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+#pragma endregion //Print Result
+
+    return 0;
+}
 ```
 
 ## Summary
